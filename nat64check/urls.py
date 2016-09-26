@@ -20,7 +20,7 @@ from django.contrib import admin
 from django.views.generic.base import RedirectView
 
 urlpatterns = [
-    url(r'^$', RedirectView.as_view(url='/v6score/')),
+    url(r'^$', RedirectView.as_view(permanent=True, url='/v6score/')),
     url(r'^admin/', admin.site.urls),
     url(r'^v6score/', include('v6score.urls')),
 ]
