@@ -1,0 +1,6 @@
+colorlog
+Django
+ipython
+numpy
+scikit-image
+scipy
