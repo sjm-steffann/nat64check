@@ -35,3 +35,9 @@ docs/_build/
 
 ### File-based project format:
 *.iws
+
+### Development database
+db.sqlite3
+
+### Media/capture files
+media/

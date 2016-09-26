@@ -1,0 +1,100 @@
+<table>
+    <tr>
+        <th>Website:</th>
+        <td>{{ measurement.website.hostname }}</td>
+    </tr>
+    <tr>
+        <th>Test requested:</th>
+        <td>{{ measurement.requested }}</td>
+    </tr>
+    <tr>
+        <th>Test started:</th>
+        <td>{{ measurement.started }}</td>
+    </tr>
+    <tr>
+        <th>Test finished:</th>
+        <td>{{ measurement.finished }}</td>
+    </tr>
+
+    {% if measurement.finished %}
+        <tr>
+            <th>&nbsp;</th>
+            <td></td>
+        </tr>
+        {% if measurement.v6only_score >= 0 or measurement.nat64_score >= 0 %}
+            <tr>
+                <th>IPv6-only score:</th>
+                {% if measurement.v6only_score == 0 %}
+                    <td class="no-score">Unreachable</td>
+                {% elif measurement.v6only_score < 0.8 %}
+                    <td class="bad-score">{% widthratio measurement.v6only_score 1 100 %}%</td>
+                {% elif measurement.v6only_score < 0.95 %}
+                    <td class="good-score">{% widthratio measurement.v6only_score 1 100 %}%</td>
+                {% else %}
+                    <td class="perfect-score">{% widthratio measurement.v6only_score 1 100 %}%</td>
+                {% endif %}
+            </tr>
+            <tr>
+                <th>NAT64 score:</th>
+
+                {% if measurement.nat64_score == 0 %}
+                    <td class="no-score">Unreachable</td>
+                {% elif measurement.nat64_score < 0.8 %}
+                    <td class="bad-score">{% widthratio measurement.nat64_score 1 100 %}%</td>
+                {% elif measurement.nat64_score < 0.95 %}
+                    <td class="good-score">{% widthratio measurement.nat64_score 1 100 %}%</td>
+                {% else %}
+                    <td class="perfect-score">{% widthratio measurement.nat64_score 1 100 %}%</td>
+                {% endif %}
+            </tr>
+        {% else %}
+            <tr>
+                <th>No score:</th>
+                <td>Website could not be requested over IPv4. Does it exist?</td>
+            </tr>
+        {% endif %}
+    {% endif %}
+</table>
+
+{% if measurement.finished %}
+    {% if measurement.v6only_score >= 0 or measurement.nat64_score >= 0 %}
+        <br>
+
+        <table style="width: 100%;">
+            <tr>
+                <th style="text-align:center; width: 33%">IPv4-only</th>
+                <th style="text-align:center; width: 33%">IPv6-only</th>
+                <th style="text-align:center; width: 33%">NAT64</th>
+            </tr>
+            <tr>
+                <td>
+                    {% if measurement.v4only_image %}
+                        <a href="{{ measurement.v4only_image.url }}" target="_blank">
+                            <img style="width: 100%" alt="IPv4-only" src="{{ measurement.v4only_image.url }}">
+                        </a>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if measurement.v6only_image %}
+                        <a href="{{ measurement.v6only_image.url }}" target="_blank">
+                            <img style="width: 100%" alt="IPv6-only" src="{{ measurement.v6only_image.url }}">
+                        </a>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if measurement.nat64_image %}
+                        <a href="{{ measurement.nat64_image.url }}" target="_blank">
+                            <img style="width: 100%" alt="NAT64" src="{{ measurement.nat64_image.url }}">
+                        </a>
+                    {% endif %}
+                </td>
+            </tr>
+        </table>
+    {% endif %}
+{% else %}
+    <script type="application/javascript">
+        setTimeout(function () {
+            document.location.reload();
+        }, 2500);
+    </script>
+{% endif %}

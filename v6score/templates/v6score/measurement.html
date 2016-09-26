@@ -1,0 +1,11 @@
+{% extends 'v6score/base.html' %}
+
+{% block content %}
+    <h2>Measurement #{{ measurement.pk }}</h2>
+
+    {% include 'v6score/measurement_data.html' with measurement=measurement %}
+
+    <br>
+
+    <a href="{% url 'overview' %}">Back to overview</a>
+{% endblock %}

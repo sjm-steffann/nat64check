@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>IPv6 website tester</title>
+        <style>
+            body {
+                font-family: "Roboto", "Lucida Grande", "DejaVu Sans", "Bitstream Vera Sans", Verdana, Arial, sans-serif;
+                padding: 0;
+                margin: 15px;
+            }
+
+            h1 {
+                background: #eeeeee;
+                font-size: 24pt;
+                font-weight: bold;
+                padding: 0.3em 15px;
+                margin: -15px -15px 10px -15px;
+            }
+
+            table {
+                table-layout: fixed;
+                border-collapse: collapse;
+            }
+
+            th, td {
+                text-align: left;
+                padding: 1px 1cm 1px 1px;
+            }
+
+            .no-score {
+                color: red;
+            }
+
+            .bad-score {
+                color: orange;
+            }
+
+            .good-score {
+                color: blue;
+            }
+
+            .perfect-score {
+                color: green;
+            }
+
+            ul.messages {
+                padding: 0;
+                margin: 0;
+            }
+
+            ul.messages li {
+                display: block;
+                font-weight: bold;
+                font-size: 13px;
+                margin: -10px -15px 15px -15px;
+                padding: 15px;
+                background: #dfd;
+                color: #333;
+            }
+
+            ul.messages li.warning {
+                background: #ffc;
+            }
+
+            ul.messages li.error {
+                background: #ffefef;
+            }
+        </style>
+    </head>
+    <body>
+
+        <h1>IPv6 website tester</h1>
+
+        {% if messages %}
+            <ul class="messages">
+                {% for message in messages %}
+                    <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+
+        {% block content %}
+        {% endblock %}
+
+    </body>
+</html>

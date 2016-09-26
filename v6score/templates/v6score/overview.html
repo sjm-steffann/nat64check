@@ -1,0 +1,58 @@
+{% extends 'v6score/base.html' %}
+
+{% block content %}
+    <h2>Most recently tested websites</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Website</th>
+                <th>Tested</th>
+                <th>IPv6-only score</th>
+                <th>NAT64 score</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for measurement in measurements %}
+                <tr>
+                    <td>
+                        <a href="{% url 'measurement' measurement.pk %}">{{ measurement.website.hostname }}</a>
+                    </td>
+
+                    <td>{{ measurement.finished }}</td>
+
+                    {% if measurement.v6only_score == 0 %}
+                        <td class="no-score">Unreachable</td>
+                    {% elif measurement.v6only_score < 0.8 %}
+                        <td class="bad-score">{% widthratio measurement.v6only_score 1 100 %}%</td>
+                    {% elif measurement.v6only_score < 0.95 %}
+                        <td class="good-score">{% widthratio measurement.v6only_score 1 100 %}%</td>
+                    {% else %}
+                        <td class="perfect-score">{% widthratio measurement.v6only_score 1 100 %}%</td>
+                    {% endif %}
+
+                    {% if measurement.nat64_score == 0 %}
+                        <td class="no-score">Unreachable</td>
+                    {% elif measurement.nat64_score < 0.8 %}
+                        <td class="bad-score">{% widthratio measurement.nat64_score 1 100 %}%</td>
+                    {% elif measurement.nat64_score < 0.95 %}
+                        <td class="good-score">{% widthratio measurement.nat64_score 1 100 %}%</td>
+                    {% else %}
+                        <td class="perfect-score">{% widthratio measurement.nat64_score 1 100 %}%</td>
+                    {% endif %}
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <br>
+
+    <h2>Request new measurement</h2>
+    <form method="post" action="{% url 'request' %}">
+        {% csrf_token %}
+
+        <label for="hostname">FQDN:</label>
+        <input type="text" name="hostname" id="hostname"><br>
+
+        <input type="submit">
+    </form>
+{% endblock %}

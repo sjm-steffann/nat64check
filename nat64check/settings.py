@@ -35,6 +35,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    'v6score',
 ]
 
 MIDDLEWARE = [
@@ -108,4 +110,24 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/1.10/howto/static-files/
 
 STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, "static")
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# Defaults
+WKHTMLTOIMAGE = '/usr/local/bin/wkhtmltoimage'
+IMAGE_WIDTH = 1024
+IMAGE_HEIGHT = 1024
+V4PROXY_HOST = 'v4only.proxy.ipv6-lab.net'
+V4PROXY_PORT = 80
+V6PROXY_HOST = 'v6only.proxy.ipv6-lab.net'
+V6PROXY_PORT = 80
+NAT64PROXY_HOST = 'nat64.proxy.ipv6-lab.net'
+NAT64PROXY_PORT = 80
+
+# Override from local settings
+try:
+    from .local_settings import *
+except ImportError:
+    pass
