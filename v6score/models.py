@@ -10,8 +10,8 @@ from subprocess import Popen, PIPE, TimeoutExpired
 import skimage.io
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
+from django.core.urlresolvers import reverse
 from django.db import models
-from django.urls.base import reverse
 from django.utils import timezone
 from skimage.measure import compare_ssim
 
