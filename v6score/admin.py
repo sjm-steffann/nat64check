@@ -9,9 +9,66 @@ class WebsiteAdmin(admin.ModelAdmin):
     list_display = ('hostname',)
 
 
+class StateFilter(admin.SimpleListFilter):
+    title = 'state'
+    parameter_name = 'state'
+
+    def lookups(self, request, model_admin):
+        return (
+            ('R', 'Requested'),
+            ('S', 'Started'),
+            ('F', 'Finished'),
+        )
+
+    def queryset(self, request, queryset):
+        if self.value() == 'R':
+            return queryset.filter(started=None, finished=None)
+        elif self.value() == 'S':
+            return queryset.exclude(started=None).filter(finished=None)
+        elif self.value() == 'F':
+            return queryset.exclude(finished=None)
+        else:
+            return queryset
+
+
+def score_filter(attribute):
+    class ScoreFilter(admin.SimpleListFilter):
+        title = attribute.replace('_', ' ')
+        parameter_name = attribute
+
+        def lookups(self, request, model_admin):
+            return (
+                ('N', 'Untested'),
+                ('U', 'Unreachable'),
+                ('B', 'Bad'),
+                ('G', 'Good'),
+                ('P', 'Perfect'),
+            )
+
+        def queryset(self, request, queryset):
+            if self.value() == 'N':
+                condition = {attribute: -1}
+            elif self.value() == 'U':
+                condition = {attribute: 0}
+            elif self.value() == 'B':
+                condition = {attribute + '__gt': 0, attribute + '__lt': 0.8}
+            elif self.value() == 'G':
+                condition = {attribute + '__gte': 0.8, attribute + '__lt': 0.95}
+            elif self.value() == 'P':
+                condition = {attribute + '__gte': 0.95}
+            else:
+                return queryset
+
+            return queryset.filter(**condition)
+
+    return ScoreFilter
+
+
 @admin.register(Measurement)
 class MeasurementAdmin(admin.ModelAdmin):
     list_display = ('website', 'requested', 'started', 'finished', 'v6only_score', 'nat64_score')
+    date_hierarchy = 'finished'
+    list_filter = (StateFilter, score_filter('v6only_score'), score_filter('nat64_score'))
     readonly_fields = ('requested', 'admin_images_inline',)
 
     fieldsets = [
