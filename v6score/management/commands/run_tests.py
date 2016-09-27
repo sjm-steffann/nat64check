@@ -25,6 +25,13 @@ class Command(BaseCommand):
             default=False,
             help='Only run manual requests',
         )
+        parser.add_argument(
+            '--retry-only',
+            action='store_true',
+            dest='retry',
+            default=False,
+            help='Only run retry requests',
+        )
 
     def handle(self, **options):
         init_logging(logger, int(options['verbosity']))
@@ -50,6 +57,8 @@ class Command(BaseCommand):
 
                         if options['manual']:
                             measurements = measurements.filter(manual=True)
+                        if options['retry']:
+                            measurements = measurements.exclude(retry_for=None)
 
                         measurement = measurements.first()
 
