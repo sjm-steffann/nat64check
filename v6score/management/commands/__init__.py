@@ -24,6 +24,9 @@ def init_logging(logger, verbosity):
         pil_logger = logging.getLogger('PIL')
         pil_logger.setLevel(logging.INFO)
 
+        django_db_logger = logging.getLogger('django.db')
+        django_db_logger.setLevel(logging.INFO)
+
     if verbosity >= 2:
         logger.setLevel(logging.INFO)
 
