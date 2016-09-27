@@ -3,6 +3,7 @@ import io
 import logging
 import os
 import re
+import signal
 import tempfile
 import warnings
 from subprocess import Popen, PIPE, TimeoutExpired
@@ -49,6 +50,12 @@ def my_basedir(instance, filename):
     return 'capture/{}/{}/{}'.format(instance.website.hostname,
                                      datetime.datetime.now().strftime('%Y-%m-%d/%H-%M'),
                                      filename)
+
+
+def ignore_signals():
+    # Ignore the SIGINT signal by setting the handler to the standard
+    # signal handler SIG_IGN.
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 
 class Measurement(models.Model):
@@ -117,6 +124,7 @@ class Measurement(models.Model):
                 + ['--local-storage-path=' + v4only_temp]
                 + [script, url, settings.V4PROXY_HOST, str(settings.V4PROXY_PORT)],
                 stdout=PIPE,
+                preexec_fn=ignore_signals,
                 cwd='/tmp'
             )
             logger.debug("Running {}".format(' '.join(v4only_process.args)))
@@ -126,6 +134,7 @@ class Measurement(models.Model):
                 + ['--local-storage-path=' + v6only_temp]
                 + [script, url, settings.V6PROXY_HOST, str(settings.V6PROXY_PORT)],
                 stdout=PIPE,
+                preexec_fn=ignore_signals,
                 cwd='/tmp'
             )
             logger.debug("Running {}".format(' '.join(v6only_process.args)))
@@ -135,6 +144,7 @@ class Measurement(models.Model):
                 + ['--local-storage-path=' + nat64_temp]
                 + [script, url, settings.NAT64PROXY_HOST, str(settings.NAT64PROXY_PORT)],
                 stdout=PIPE,
+                preexec_fn=ignore_signals,
                 cwd='/tmp'
             )
             logger.debug("Running {}".format(' '.join(nat64_process.args)))
