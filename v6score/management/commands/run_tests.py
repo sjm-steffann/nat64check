@@ -22,6 +22,7 @@ class Command(BaseCommand):
         stopping = []
 
         def stop_me(sig_num, stack):
+            logger.critical("Interrupt received, please wait while we finish the current test")
             stopping.append(True)
 
         signal.signal(signal.SIGINT, stop_me)
