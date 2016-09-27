@@ -200,6 +200,7 @@ class MeasurementAdmin(admin.ModelAdmin):
     date_hierarchy = 'finished'
     list_filter = ('manual', StateFilter, score_filter('v6only_score'), score_filter('nat64_score'))
     readonly_fields = ('requested', 'admin_images_inline',)
+    actions = ('mark_pending_as_manual',)
 
     fieldsets = [
         ('Test', {
@@ -212,6 +213,12 @@ class MeasurementAdmin(admin.ModelAdmin):
             'fields': ('admin_images_inline',)
         }),
     ]
+
+    # noinspection PyMethodMayBeStatic
+    def mark_pending_as_manual(self, request, queryset):
+        pending = queryset.filter(started=None)
+        pending.update(manual=True)
+        self.message_user(request, "{} pending measurements marked as manual".format(pending.count()))
 
     def admin_v6only_score(self, obj):
         return show_score(obj.v6only_score)
