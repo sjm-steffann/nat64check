@@ -53,7 +53,11 @@ class Command(BaseCommand):
 
             if measurement:
                 logging.info("Running {}".format(measurement))
-                measurement.run_test()
+                result = measurement.run_test()
+                if result & 5 != 0:
+                    logging.warning("Dubious result, re-scheduling test")
+                    new_measurement = Measurement(website=measurement.website)
+                    new_measurement.save()
 
             else:
                 logger.debug("Nothing to process, sleeping")

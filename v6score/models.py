@@ -140,41 +140,56 @@ class Measurement(models.Model):
             logger.debug("Running {}".format(' '.join(nat64_process.args)))
 
             # Wait for tests to finish
+            timeout = 30
             try:
-                v4only_out = v4only_process.communicate(timeout=30)[0]
+                v4only_out = v4only_process.communicate(timeout=timeout)[0]
             except TimeoutExpired:
                 logger.error("{}: IPv4-only load timed out".format(url))
                 v4only_process.kill()
                 v4only_out = None
 
-            try:
-                v6only_out = v6only_process.communicate(timeout=30)[0]
-            except TimeoutExpired:
-                logger.error("{}: IPv6-only load timed out".format(url))
+            if v4only_out:
+                try:
+                    v6only_out = v6only_process.communicate(timeout=timeout)[0]
+                except TimeoutExpired:
+                    logger.error("{}: IPv6-only load timed out".format(url))
+                    v6only_process.kill()
+                    v6only_out = None
+
+                try:
+                    nat64_out = nat64_process.communicate(timeout=timeout)[0]
+                except TimeoutExpired:
+                    logger.error("{}: NAT64 load timed out".format(url))
+                    nat64_process.kill()
+                    nat64_out = None
+            else:
                 v6only_process.kill()
                 v6only_out = None
 
-            try:
-                nat64_out = nat64_process.communicate(timeout=30)[0]
-            except TimeoutExpired:
-                logger.error("{}: NAT64 load timed out".format(url))
                 nat64_process.kill()
                 nat64_out = None
 
         v4only_ok = v4only_out and v4only_process.returncode == 0
+        return_value = 0
         if v4only_ok:
             # Store the image
             self.v4only_image.save('v4.png', ContentFile(v4only_out), save=False)
+        else:
+            return_value |= 1
 
         v6only_ok = v6only_out and v6only_process.returncode == 0
         if v6only_ok:
             # Store the image
             self.v6only_image.save('v6.png', ContentFile(v6only_out), save=False)
+        else:
+            return_value |= 2
 
         nat64_ok = nat64_out and nat64_process.returncode == 0
         if nat64_ok:
             # Store the image
             self.nat64_image.save('nat64.png', ContentFile(nat64_out), save=False)
+        else:
+            return_value |= 4
 
         if v4only_ok:
             logger.debug("{}: Loading IPv4-only screenshot".format(url))
@@ -214,3 +229,5 @@ class Measurement(models.Model):
 
         self.finished = timezone.now()
         self.save()
+
+        return return_value
