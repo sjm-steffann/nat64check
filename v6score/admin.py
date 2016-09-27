@@ -139,6 +139,25 @@ class WebsiteAdmin(admin.ModelAdmin):
     max_nat64_score.admin_order_field = 'max_nat64_score'
 
 
+class RetryFilter(admin.SimpleListFilter):
+    title = 'retry'
+    parameter_name = 'retry'
+
+    def lookups(self, request, model_admin):
+        return (
+            ('Y', 'Is a retry'),
+            ('N', 'Is not a retry'),
+        )
+
+    def queryset(self, request, queryset):
+        if self.value() == 'Y':
+            return queryset.exclude(retry_for=None)
+        elif self.value() == 'N':
+            return queryset.filter(retry_for=None)
+        else:
+            return queryset
+
+
 class StateFilter(admin.SimpleListFilter):
     title = 'state'
     parameter_name = 'state'
@@ -196,9 +215,11 @@ def score_filter(attribute):
 
 @admin.register(Measurement)
 class MeasurementAdmin(admin.ModelAdmin):
-    list_display = ('website', 'manual', 'requested', 'started', 'finished', 'admin_v6only_score', 'admin_nat64_score')
+    list_display = ('website', 'manual', 'admin_is_retry',
+                    'requested', 'started', 'finished',
+                    'admin_v6only_score', 'admin_nat64_score')
     date_hierarchy = 'finished'
-    list_filter = ('manual', StateFilter, score_filter('v6only_score'), score_filter('nat64_score'))
+    list_filter = ('manual', RetryFilter, StateFilter, score_filter('v6only_score'), score_filter('nat64_score'))
     readonly_fields = ('requested', 'admin_images_inline',)
     actions = ('mark_pending_as_manual',)
 
@@ -219,6 +240,12 @@ class MeasurementAdmin(admin.ModelAdmin):
         pending = queryset.filter(started=None)
         pending.update(manual=True)
         self.message_user(request, "{} pending measurements marked as manual".format(pending.count()))
+
+    def admin_is_retry(self, obj):
+        return obj.retry_for is not None
+
+    admin_is_retry.short_description = 'is retry'
+    admin_is_retry.boolean = True
 
     def admin_v6only_score(self, obj):
         return show_score(obj.v6only_score)

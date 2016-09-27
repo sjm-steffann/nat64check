@@ -71,7 +71,7 @@ class Command(BaseCommand):
                 result = measurement.run_test()
                 if result & 5 != 0:
                     logging.warning("Dubious result, re-scheduling test")
-                    new_measurement = Measurement(website=measurement.website)
+                    new_measurement = Measurement(website=measurement.website, retry_for=measurement)
                     new_measurement.save()
 
             else:

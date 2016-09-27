@@ -64,6 +64,7 @@ def ignore_signals():
 class Measurement(models.Model):
     website = models.ForeignKey(Website)
     manual = models.BooleanField(default=False)
+    retry_for = models.ForeignKey('self', blank=True, null=True)
     requested = models.DateTimeField(auto_now_add=True)
     started = models.DateTimeField(blank=True, null=True)
     finished = models.DateTimeField(blank=True, null=True)
@@ -77,6 +78,7 @@ class Measurement(models.Model):
 
     def __str__(self):
         prefix = 'Manual ' if self.manual else ''
+        prefix += 'Retry ' if self.retry_for else ''
 
         if self.finished:
             return prefix + 'Test #{}: {} finished at {}'.format(self.pk, self.website.hostname, self.finished)
