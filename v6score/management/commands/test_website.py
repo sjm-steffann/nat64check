@@ -22,6 +22,6 @@ class Command(LabelCommand):
         website = Website.objects.get_or_create(hostname=label.strip())[0]
 
         # Build the test results
-        results = Measurement(website=website)
+        results = Measurement(website=website, manual=True)
 
         results.run_test()

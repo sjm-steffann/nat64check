@@ -35,11 +35,16 @@ def request_measurement(request):
     website = Website.objects.get_or_create(hostname=hostname)[0]
 
     measurement = website.measurement_set.filter(finished=None).order_by('requested').first()
-    if not measurement:
+    if measurement:
+        if not measurement.manual:
+            # Mark as manual
+            measurement.manual = True
+            measurement.save()
+    else:
         recent = timezone.now() - timedelta(minutes=10)
         measurement = website.measurement_set.filter(finished__gt=recent).order_by('-finished').first()
         if not measurement:
-            measurement = Measurement(website=website)
+            measurement = Measurement(website=website, manual=True)
             measurement.save()
 
     return redirect(measurement)

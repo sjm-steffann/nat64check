@@ -63,6 +63,7 @@ def ignore_signals():
 
 class Measurement(models.Model):
     website = models.ForeignKey(Website)
+    manual = models.BooleanField(default=False)
     requested = models.DateTimeField(auto_now_add=True)
     started = models.DateTimeField(blank=True, null=True)
     finished = models.DateTimeField(blank=True, null=True)
@@ -75,12 +76,14 @@ class Measurement(models.Model):
     nat64_score = models.FloatField(blank=True, null=True)
 
     def __str__(self):
+        prefix = 'Manual ' if self.manual else ''
+
         if self.finished:
-            return 'Test #{}: {} finished at {}'.format(self.pk, self.website.hostname, self.finished)
+            return prefix + 'Test #{}: {} finished at {}'.format(self.pk, self.website.hostname, self.finished)
         elif self.started:
-            return 'Test #{}: {} started at {}'.format(self.pk, self.website.hostname, self.started)
+            return prefix + 'Test #{}: {} started at {}'.format(self.pk, self.website.hostname, self.started)
         else:
-            return 'Test #{}: {} requested at {}'.format(self.pk, self.website.hostname, self.requested)
+            return prefix + 'Test #{}: {} requested at {}'.format(self.pk, self.website.hostname, self.requested)
 
     def get_absolute_url(self):
         return reverse('measurement', args=(self.pk,))

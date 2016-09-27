@@ -196,14 +196,14 @@ def score_filter(attribute):
 
 @admin.register(Measurement)
 class MeasurementAdmin(admin.ModelAdmin):
-    list_display = ('website', 'requested', 'started', 'finished', 'admin_v6only_score', 'admin_nat64_score')
+    list_display = ('website', 'manual', 'requested', 'started', 'finished', 'admin_v6only_score', 'admin_nat64_score')
     date_hierarchy = 'finished'
-    list_filter = (StateFilter, score_filter('v6only_score'), score_filter('nat64_score'))
+    list_filter = ('manual', StateFilter, score_filter('v6only_score'), score_filter('nat64_score'))
     readonly_fields = ('requested', 'admin_images_inline',)
 
     fieldsets = [
         ('Test', {
-            'fields': ('website', 'requested', 'started', 'finished')
+            'fields': ('website', 'manual', 'requested', 'started', 'finished')
         }),
         ('Results', {
             'fields': ('v6only_score', 'nat64_score')

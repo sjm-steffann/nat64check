@@ -16,6 +16,16 @@ logger = logging.getLogger()
 class Command(BaseCommand):
     help = "Run tests that haven't been processed yet"
 
+    def add_arguments(self, parser):
+        # Named (optional) arguments
+        parser.add_argument(
+            '--manual-only',
+            action='store_true',
+            dest='manual',
+            default=False,
+            help='Only run manual requests',
+        )
+
     def handle(self, **options):
         init_logging(logger, int(options['verbosity']))
 
@@ -33,11 +43,15 @@ class Command(BaseCommand):
             while True:
                 try:
                     with transaction.atomic():
-                        measurement = Measurement.objects \
+                        measurements = Measurement.objects \
                             .select_for_update() \
                             .filter(started=None) \
-                            .order_by('requested') \
-                            .first()
+                            .order_by('requested')
+
+                        if options['manual']:
+                            measurements = measurements.filter(manual=True)
+
+                        measurement = measurements.first()
 
                         if measurement:
                             # Setting started will let other scripts know this one is being handled
