@@ -45,6 +45,9 @@ class Website(models.Model):
     def __str__(self):
         return self.hostname
 
+    class Meta:
+        ordering = ('hostname',)
+
 
 def my_basedir(instance, filename):
     return 'capture/{}/{}/{}'.format(instance.website.hostname,
@@ -68,8 +71,8 @@ class Measurement(models.Model):
     v6only_image = models.ImageField(upload_to=my_basedir, blank=True, null=True)
     nat64_image = models.ImageField(upload_to=my_basedir, blank=True, null=True)
 
-    v6only_score = models.FloatField(default=-1)
-    nat64_score = models.FloatField(default=-1)
+    v6only_score = models.FloatField(blank=True, null=True)
+    nat64_score = models.FloatField(blank=True, null=True)
 
     def __str__(self):
         if self.finished:

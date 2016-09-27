@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'v6score',
 
     'django_uwsgi',
+    'debug_toolbar',
 ]
 
 MIDDLEWARE_CLASSES = [
