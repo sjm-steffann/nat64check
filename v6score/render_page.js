@@ -20,7 +20,7 @@ if (system.args.length >= 4) {
 }
 
 // Set up proxy
-phantom.setProxy(proxy_host, proxy_port, 'manual', '', '');
+phantom.setProxy(proxy_host, proxy_port, 'http', '', '');
 
 // Set up page
 function init_page(new_page) {
