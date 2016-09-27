@@ -37,6 +37,9 @@ function init_page(new_page) {
     page.customHeaders = {
         "DNT": "1"
     };
+    page.resourceTimeout = 5000;
+    page.onResourceTimeout = function () {
+    };
     page.onConsoleMessage = function () {
     };
     page.onError = function () {

@@ -37,6 +37,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     'v6score',
+
+    'django_uwsgi',
 ]
 
 MIDDLEWARE_CLASSES = [
