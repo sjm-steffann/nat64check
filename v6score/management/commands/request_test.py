@@ -53,6 +53,6 @@ class Command(LabelCommand):
             if not options['manual'] and measurement:
                 logger.warning("{} has already been tested recently".format(hostname))
             else:
-                measurement = Measurement(website=website, manual=options['manual'])
+                measurement = Measurement(website=website, requested=timezone.now(), manual=options['manual'])
                 measurement.save()
                 logger.info("{} request added".format(hostname))

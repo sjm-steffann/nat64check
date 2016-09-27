@@ -1,6 +1,7 @@
 import logging
 
 from django.core.management.base import LabelCommand
+from django.utils import timezone
 
 from v6score.management.commands import init_logging
 from v6score.models import Website, Measurement
@@ -22,6 +23,6 @@ class Command(LabelCommand):
         website = Website.objects.get_or_create(hostname=label.strip())[0]
 
         # Build the test results
-        results = Measurement(website=website, manual=True)
+        results = Measurement(website=website, requested=timezone.now(), manual=True)
 
         results.run_test()

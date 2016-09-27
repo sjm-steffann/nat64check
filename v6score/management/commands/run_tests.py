@@ -1,6 +1,7 @@
 import logging
 import signal
 import time
+from datetime import timedelta
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
@@ -52,7 +53,7 @@ class Command(BaseCommand):
                     with transaction.atomic():
                         measurements = Measurement.objects \
                             .select_for_update() \
-                            .filter(started=None) \
+                            .filter(started=None, requested__lte=timezone.now()) \
                             .order_by('requested')
 
                         if options['manual']:
@@ -79,12 +80,21 @@ class Command(BaseCommand):
                 logging.info("Running {}".format(measurement))
                 result = measurement.run_test()
                 if result & 5 != 0:
-                    if measurement.retry_for is not None:
-                        logging.warning("Dubious result, but it's already a retry. Not trying again")
+                    if measurement.retry_for:
+                        # Double the previous delta
+                        delta = measurement.requested - measurement.retry_for.requested
+                        delta *= 2
+                        if delta.total_seconds() / 60 < 60:
+                            delta = timedelta(minutes=60)
                     else:
-                        logging.warning("Dubious result, re-scheduling test")
-                        new_measurement = Measurement(website=measurement.website, retry_for=measurement)
-                        new_measurement.save()
+                        delta = timedelta(minutes=60)
+
+                    requested = timezone.now() + delta
+
+                    logging.warning("Dubious result, re-scheduling test")
+                    new_measurement = Measurement(website=measurement.website, requested=requested,
+                                                  retry_for=measurement)
+                    new_measurement.save()
 
             else:
                 logger.debug("Nothing to process, sleeping")

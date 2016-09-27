@@ -65,7 +65,7 @@ class Measurement(models.Model):
     website = models.ForeignKey(Website)
     manual = models.BooleanField(default=False)
     retry_for = models.ForeignKey('self', blank=True, null=True)
-    requested = models.DateTimeField(auto_now_add=True)
+    requested = models.DateTimeField()
     started = models.DateTimeField(blank=True, null=True)
     finished = models.DateTimeField(blank=True, null=True)
 

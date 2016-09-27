@@ -44,7 +44,7 @@ def request_measurement(request):
         recent = timezone.now() - timedelta(minutes=10)
         measurement = website.measurement_set.filter(finished__gt=recent).order_by('-finished').first()
         if not measurement:
-            measurement = Measurement(website=website, manual=True)
+            measurement = Measurement(website=website, requested=timezone.now(), manual=True)
             measurement.save()
 
     return redirect(measurement)
