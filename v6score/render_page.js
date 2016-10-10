@@ -2,80 +2,151 @@
 
 var page = require('webpage').create(),
     system = require('system'),
-    address, proxy_host, proxy_port;
+    output = {
+        'success': false,
+        'status': '',
+        'image': null,
+        'resources': {}
+    },
+    screenshotTimer = null,
+    abandonHopeTimer = null,
+    address;
 
 // Check command line arguments
-if (system.args.length < 3 || system.args.length > 4) {
-    console.log('Usage: render_page.js URL PROXY_HOST [PROXY_PORT]');
+if (system.args.length != 2) {
+    console.log('Usage: render_page.js URL');
     phantom.exit(1);
 }
 
 // Process command line arguments
 address = system.args[1];
-proxy_host = system.args[2];
-if (system.args.length >= 4) {
-    proxy_port = system.args[3];
-} else {
-    proxy_port = 80;
+
+function capitalize(s) {
+    return s && s[0].toUpperCase() + s.slice(1);
 }
 
-// Set up proxy
-phantom.setProxy(proxy_host, proxy_port, 'http', '', '');
+// Create a snapshot
+function takeScreenshot() {
+    try {
+        output.image = page.renderBase64('png');
+        console.log(JSON.stringify(output));
+        phantom.exit(0);
+    } catch (e) {
+        output.status = 'render error';
+        console.log(JSON.stringify(output));
+        phantom.exit(1);
+    }
+}
+
+// If all else fails
+function abandonHope() {
+    output.status = 'abandoned';
+    console.log(JSON.stringify(output));
+    phantom.exit(1);
+}
 
 // Set up page
-function init_page(new_page) {
-    page.viewportSize = {
+function init_page(newPage) {
+    newPage.viewportSize = {
         width: 1024,
         height: 1024
     };
-    page.clipRect = {
+    newPage.clipRect = {
         left: 0,
         top: 0,
-        width: page.viewportSize.width,
-        height: page.viewportSize.height
+        width: newPage.viewportSize.width,
+        height: newPage.viewportSize.height
     };
-    page.customHeaders = {
+    newPage.customHeaders = {
         "DNT": "1"
     };
-    page.resourceTimeout = 5000;
-    page.onResourceTimeout = function () {
+    newPage.settings.resourceTimeout = 10000;
+    newPage.onResourceRequested = function (data) {
+        // Don't include the data from data URLs
+        var url = data.url;
+        if (url.split(':')[0] == 'data') {
+            url = url.split(';')[0];
+        }
+
+        output.resources[data.id] = {
+            "method": data.method,
+            "url": url,
+            "requestTime": data.time,
+            "stage": "start",
+            "error": false,
+            "timedOut": false,
+        };
+
+        // Reset the screenshot timer if necessary
+        if (screenshotTimer) {
+            clearTimeout(screenshotTimer);
+            screenshotTimer = setTimeout(takeScreenshot, 500);
+        }
     };
-    page.onConsoleMessage = function () {
+    newPage.onResourceReceived = function (data) {
+        output.resources[data.id]['bodySize'] = data.bodySize;
+        output.resources[data.id]['contentType'] = data.contentType;
+        output.resources[data.id]['headers'] = data.headers;
+        output.resources[data.id]['stage'] = data.stage;
+        output.resources[data.id]['status'] = data.status;
+
+        var timeName = 'response' + capitalize(data.stage) + 'Time';
+        output.resources[data.id][timeName] = data.time;
+
+        // Reset the screenshot timer if necessary
+        if (screenshotTimer) {
+            clearTimeout(screenshotTimer);
+            screenshotTimer = setTimeout(takeScreenshot, 500);
+        }
     };
-    page.onError = function () {
+    newPage.onResourceError = function (data) {
+        output.resources[data.id]['error'] = true;
+        output.resources[data.id]['errorCode'] = data.errorCode;
     };
-    page.onAlert = function () {
+    newPage.onResourceTimeout = function (data) {
+        output.resources[data.id]['timedOut'] = true;
     };
-    page.onConfirm = function () {
+    newPage.onConsoleMessage = function (msg) {
+    };
+    newPage.onError = function (msg, trace) {
+    };
+    newPage.onAlert = function () {
+    };
+    newPage.onConfirm = function () {
         return true;
     };
-    page.onPrompt = function () {
+    newPage.onPrompt = function () {
         return '';
     };
-    page.onPageCreated = function (created_page) {
-        init_page(created_page);
+    newPage.onPageCreated = function (createdPage) {
+        init_page(createdPage);
     };
 }
 init_page(page);
 
+// Fallback
+abandonHopeTimer = setTimeout(abandonHope, 30000);
+
 // Open and render to stdout when done
 page.open(address, function (status) {
-    // system.stderr.writeLine(JSON.stringify(page));
-    if (status !== 'success' || page.title == '502 Proxy Error' || page.plainText == '') {
+    // Set (very rough) status in output
+    output.status = status;
+
+    if (status !== 'success') {
+        console.log(JSON.stringify(output));
+        phantom.exit(1);
+    } else if (page.title == '502 Proxy Error' || output.resources[1].error) {
+        // Override status for this special case
+        output.status = 'proxy error';
+        console.log(JSON.stringify(output));
         phantom.exit(1);
     } else {
-        // Set a background color, because the default is transparent
-        page.evaluate(function () {
-            document.body.bgColor = 'white';
-        });
+        output.success = true;
 
-        window.setTimeout(function () {
-            try {
-                page.render('/dev/stdout', {format: 'png', quality: '0'});
-            } catch (e) {
-                phantom.exit(1);
-            }
-            phantom.exit(0);
-        }, 100);
+        // We have hope (and a new timer coming up)
+        clearTimeout(abandonHopeTimer);
+
+        // Set a timer for the screenshot. Further network activity will delay the timer to allow the page to finish.
+        screenshotTimer = setTimeout(takeScreenshot, 2500);
     }
 });

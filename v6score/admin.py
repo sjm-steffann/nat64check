@@ -1,10 +1,13 @@
-from datetime import timedelta
-
+import yaml
 from django.contrib import admin
 from django.db.models.aggregates import Avg, Count, Max, Min
-from django.utils import timezone
+from django.utils.html import format_html
 from django.utils.safestring import mark_safe
+from pygments import highlight
+from pygments.formatters.html import HtmlFormatter
+from pygments.lexers.data import YamlLexer
 
+from v6score.filter import LastTestFilter, RetryFilter, StateFilter, score_filter
 from v6score.models import Measurement, Website
 
 
@@ -25,56 +28,23 @@ def show_score(score):
 
 class InlineMeasurement(admin.TabularInline):
     model = Measurement
-    fields = ('requested', 'started', 'finished', 'admin_v6only_score', 'admin_nat64_score')
-    readonly_fields = ('requested', 'started', 'finished', 'admin_v6only_score', 'admin_nat64_score')
+    fields = ('requested', 'started', 'finished', 'admin_v6only_image_score', 'admin_nat64_image_score')
+    readonly_fields = ('requested', 'started', 'finished', 'admin_v6only_image_score', 'admin_nat64_image_score')
     can_delete = False
     show_change_link = True
 
     def has_add_permission(self, request):
         return False
 
-    def admin_v6only_score(self, obj):
-        return show_score(obj.v6only_score)
+    def admin_v6only_image_score(self, obj):
+        return show_score(obj.v6only_image_score)
 
-    admin_v6only_score.short_description = 'v6only score'
+    admin_v6only_image_score.short_description = 'v6only score'
 
-    def admin_nat64_score(self, obj):
-        return show_score(obj.nat64_score)
+    def admin_nat64_image_score(self, obj):
+        return show_score(obj.nat64_image_score)
 
-    admin_nat64_score.short_description = 'nat64 score'
-
-
-class LastTestFilter(admin.SimpleListFilter):
-    title = 'last test'
-    parameter_name = 'last'
-
-    def lookups(self, request, model_admin):
-        return (
-            ('T', 'Today'),
-            ('W', 'Last 7 days'),
-            ('MW', 'More than a week ago'),
-            ('MM', 'More than a month ago'),
-            ('MY', 'More than a year ago'),
-        )
-
-    def queryset(self, request, queryset):
-        if self.value() == 'T':
-            limit = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
-            return queryset.filter(measurement__finished__gte=limit)
-        elif self.value() == 'W':
-            limit = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=7)
-            return queryset.filter(measurement__finished__gte=limit)
-        elif self.value() == 'MW':
-            limit = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=7)
-            return queryset.exclude(measurement__finished__gte=limit)
-        elif self.value() == 'MM':
-            limit = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=30)
-            return queryset.exclude(measurement__finished__gte=limit)
-        elif self.value() == 'MY':
-            limit = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=365)
-            return queryset.exclude(measurement__finished__gte=limit)
-        else:
-            return queryset
+    admin_nat64_image_score.short_description = 'nat64 score'
 
 
 @admin.register(Website)
@@ -82,8 +52,8 @@ class WebsiteAdmin(admin.ModelAdmin):
     list_display = ('hostname', 'hash_param',
                     'measurement_count',
                     'last_test',
-                    'min_v6only_score', 'avg_v6only_score', 'max_v6only_score',
-                    'min_nat64_score', 'avg_nat64_score', 'max_nat64_score')
+                    'min_v6only_image_score', 'avg_v6only_image_score', 'max_v6only_image_score',
+                    'min_nat64_image_score', 'avg_nat64_image_score', 'max_nat64_image_score')
     list_filter = (LastTestFilter,)
     inlines = [InlineMeasurement]
 
@@ -91,12 +61,12 @@ class WebsiteAdmin(admin.ModelAdmin):
         qs = super().get_queryset(request)
         return qs.annotate(measurement_count=Count('measurement'),
                            last_test=Max('measurement__finished'),
-                           min_v6only_score=Min('measurement__v6only_score'),
-                           avg_v6only_score=Avg('measurement__v6only_score'),
-                           max_v6only_score=Max('measurement__v6only_score'),
-                           min_nat64_score=Min('measurement__nat64_score'),
-                           avg_nat64_score=Avg('measurement__nat64_score'),
-                           max_nat64_score=Max('measurement__nat64_score'))
+                           min_v6only_image_score=Min('measurement__v6only_image_score'),
+                           avg_v6only_image_score=Avg('measurement__v6only_image_score'),
+                           max_v6only_image_score=Max('measurement__v6only_image_score'),
+                           min_nat64_image_score=Min('measurement__nat64_image_score'),
+                           avg_nat64_image_score=Avg('measurement__nat64_image_score'),
+                           max_nat64_image_score=Max('measurement__nat64_image_score'))
 
     def measurement_count(self, obj):
         return obj.measurement_count
@@ -108,119 +78,54 @@ class WebsiteAdmin(admin.ModelAdmin):
 
     last_test.admin_order_field = 'last_test'
 
-    def min_v6only_score(self, obj):
-        return show_score(obj.min_v6only_score)
+    def min_v6only_image_score(self, obj):
+        return show_score(obj.min_v6only_image_score)
 
-    min_v6only_score.admin_order_field = 'min_v6only_score'
+    min_v6only_image_score.admin_order_field = 'min_v6only_image_score'
 
-    def avg_v6only_score(self, obj):
-        return show_score(obj.avg_v6only_score)
+    def avg_v6only_image_score(self, obj):
+        return show_score(obj.avg_v6only_image_score)
 
-    avg_v6only_score.admin_order_field = 'avg_v6only_score'
+    avg_v6only_image_score.admin_order_field = 'avg_v6only_image_score'
 
-    def max_v6only_score(self, obj):
-        return show_score(obj.max_v6only_score)
+    def max_v6only_image_score(self, obj):
+        return show_score(obj.max_v6only_image_score)
 
-    max_v6only_score.admin_order_field = 'max_v6only_score'
+    max_v6only_image_score.admin_order_field = 'max_v6only_image_score'
 
-    def min_nat64_score(self, obj):
-        return show_score(obj.min_nat64_score)
+    def min_nat64_image_score(self, obj):
+        return show_score(obj.min_nat64_image_score)
 
-    min_nat64_score.admin_order_field = 'min_nat64_score'
+    min_nat64_image_score.admin_order_field = 'min_nat64_image_score'
 
-    def avg_nat64_score(self, obj):
-        return show_score(obj.avg_nat64_score)
+    def avg_nat64_image_score(self, obj):
+        return show_score(obj.avg_nat64_image_score)
 
-    avg_nat64_score.admin_order_field = 'avg_nat64_score'
+    avg_nat64_image_score.admin_order_field = 'avg_nat64_image_score'
 
-    def max_nat64_score(self, obj):
-        return show_score(obj.max_nat64_score)
+    def max_nat64_image_score(self, obj):
+        return show_score(obj.max_nat64_image_score)
 
-    max_nat64_score.admin_order_field = 'max_nat64_score'
-
-
-class RetryFilter(admin.SimpleListFilter):
-    title = 'retry'
-    parameter_name = 'retry'
-
-    def lookups(self, request, model_admin):
-        return (
-            ('Y', 'Is a retry'),
-            ('N', 'Is not a retry'),
-        )
-
-    def queryset(self, request, queryset):
-        if self.value() == 'Y':
-            return queryset.exclude(retry_for=None)
-        elif self.value() == 'N':
-            return queryset.filter(retry_for=None)
-        else:
-            return queryset
-
-
-class StateFilter(admin.SimpleListFilter):
-    title = 'state'
-    parameter_name = 'state'
-
-    def lookups(self, request, model_admin):
-        return (
-            ('R', 'Requested'),
-            ('S', 'Started'),
-            ('F', 'Finished'),
-        )
-
-    def queryset(self, request, queryset):
-        if self.value() == 'R':
-            return queryset.filter(started=None, finished=None)
-        elif self.value() == 'S':
-            return queryset.exclude(started=None).filter(finished=None)
-        elif self.value() == 'F':
-            return queryset.exclude(finished=None)
-        else:
-            return queryset
-
-
-def score_filter(attribute):
-    class ScoreFilter(admin.SimpleListFilter):
-        title = attribute.replace('_', ' ')
-        parameter_name = attribute
-
-        def lookups(self, request, model_admin):
-            return (
-                ('N', 'Untested'),
-                ('U', 'Unreachable'),
-                ('B', 'Bad'),
-                ('G', 'Good'),
-                ('P', 'Perfect'),
-            )
-
-        def queryset(self, request, queryset):
-            if self.value() == 'N':
-                condition = {attribute: None}
-            elif self.value() == 'U':
-                condition = {attribute: 0}
-            elif self.value() == 'B':
-                condition = {attribute + '__gt': 0, attribute + '__lt': 0.8}
-            elif self.value() == 'G':
-                condition = {attribute + '__gte': 0.8, attribute + '__lt': 0.95}
-            elif self.value() == 'P':
-                condition = {attribute + '__gte': 0.95}
-            else:
-                return queryset
-
-            return queryset.filter(**condition)
-
-    return ScoreFilter
+    max_nat64_image_score.admin_order_field = 'max_nat64_image_score'
 
 
 @admin.register(Measurement)
 class MeasurementAdmin(admin.ModelAdmin):
-    list_display = ('website', 'manual', 'admin_is_retry',
+    list_display = ('website', 'manual', 'admin_is_retry', 'retry_for',
                     'requested', 'started', 'finished',
-                    'admin_v6only_score', 'admin_nat64_score')
+                    'admin_v6only_image_score', 'admin_nat64_image_score',
+                    'admin_v6only_resource_score', 'admin_nat64_resource_score')
     date_hierarchy = 'finished'
-    list_filter = ('manual', RetryFilter, StateFilter, score_filter('v6only_score'), score_filter('nat64_score'))
-    readonly_fields = ('requested', 'admin_images_inline',)
+    list_filter = ('manual', RetryFilter, StateFilter,
+                   score_filter('v6only_image_score'), score_filter('nat64_image_score'),
+                   score_filter('v6only_resource_score'), score_filter('nat64_resource_score'))
+    readonly_fields = ('requested', 'admin_images_inline',
+                       'v6only_image_score', 'nat64_image_score',
+                       'v6only_resource_score', 'nat64_resource_score',
+                       'admin_v4only_resources', 'admin_v6only_resources', 'admin_nat64_resources',
+                       'admin_v4only_data', 'v4only_data', 'v4only_debug',
+                       'admin_v6only_data', 'v6only_data', 'v6only_debug',
+                       'admin_nat64_data', 'nat64_data', 'nat64_debug')
     actions = ('mark_pending_as_manual',)
 
     fieldsets = [
@@ -228,10 +133,24 @@ class MeasurementAdmin(admin.ModelAdmin):
             'fields': ('website', 'manual', 'requested', 'started', 'finished')
         }),
         ('Results', {
-            'fields': ('v6only_score', 'nat64_score')
+            'fields': (('v6only_image_score', 'nat64_image_score'),
+                       ('v6only_resource_score', 'nat64_resource_score'),
+                       ('admin_v4only_resources', 'admin_v6only_resources', 'admin_nat64_resources'))
         }),
         ('Images', {
             'fields': ('admin_images_inline',)
+        }),
+        ('Raw IPv4 data', {
+            'fields': ('admin_v4only_data', 'v4only_debug'),
+            'classes': ['collapse'],
+        }),
+        ('Raw IPv6 data', {
+            'fields': ('admin_v6only_data', 'v6only_debug'),
+            'classes': ['collapse'],
+        }),
+        ('Raw NAT64 data', {
+            'fields': ('admin_nat64_data', 'nat64_debug'),
+            'classes': ['collapse'],
         }),
     ]
 
@@ -247,15 +166,25 @@ class MeasurementAdmin(admin.ModelAdmin):
     admin_is_retry.short_description = 'is retry'
     admin_is_retry.boolean = True
 
-    def admin_v6only_score(self, obj):
-        return show_score(obj.v6only_score)
+    def admin_v6only_image_score(self, obj):
+        return show_score(obj.v6only_image_score)
 
-    admin_v6only_score.short_description = 'v6only score'
+    admin_v6only_image_score.short_description = 'v6only image score'
 
-    def admin_nat64_score(self, obj):
-        return show_score(obj.nat64_score)
+    def admin_nat64_image_score(self, obj):
+        return show_score(obj.nat64_image_score)
 
-    admin_nat64_score.short_description = 'nat64 score'
+    admin_nat64_image_score.short_description = 'nat64 image score'
+
+    def admin_v6only_resource_score(self, obj):
+        return show_score(obj.v6only_resource_score)
+
+    admin_v6only_resource_score.short_description = 'v6only resource score'
+
+    def admin_nat64_resource_score(self, obj):
+        return show_score(obj.nat64_resource_score)
+
+    admin_nat64_resource_score.short_description = 'nat64 resource score'
 
     def admin_images_inline(self, measurement):
         img = """<a href="{1}" target="_blank"><img style="width: 100%" alt="{0}" src="{1}"></a>"""
@@ -278,5 +207,77 @@ class MeasurementAdmin(admin.ModelAdmin):
             v6only_image=img.format("IPv6-only", measurement.v6only_image.url) if measurement.v6only_image else '',
             nat64_image=img.format("NAT64", measurement.nat64_image.url) if measurement.nat64_image else '',
         ))
+
+    def admin_v4only_resources(self, measurement):
+        ok, error = measurement.v4only_resources
+        return format_html("<b style='display:inline-block; width: 40px'>Ok:</b> {}<br>"
+                           "<b style='display:inline-block; width: 40px'>Error:</b> {}", ok, error)
+
+    admin_v4only_resources.short_description = 'v4only resources'
+
+    def admin_v6only_resources(self, measurement):
+        ok, error = measurement.v6only_resources
+        return format_html("<b style='display:inline-block; width: 40px'>Ok:</b> {}<br>"
+                           "<b style='display:inline-block; width: 40px'>Error:</b> {}", ok, error)
+
+    admin_v6only_resources.short_description = 'v6only resources'
+
+    def admin_nat64_resources(self, measurement):
+        ok, error = measurement.nat64_resources
+        return format_html("<b style='display:inline-block; width: 40px'>Ok:</b> {}<br>"
+                           "<b style='display:inline-block; width: 40px'>Error:</b> {}", ok, error)
+
+    admin_nat64_resources.short_description = 'nat64 resources'
+
+    def admin_v4only_data(self, measurement):
+        response = yaml.dump(measurement.v4only_data)
+
+        # Get the Pygments formatter
+        formatter = HtmlFormatter(style='colorful')
+
+        # Highlight the data
+        response = highlight(response, YamlLexer(), formatter)
+
+        # Get the stylesheet
+        style = "<style>" + formatter.get_style_defs() + "</style><br>"
+
+        # Safe the output
+        return mark_safe(style + response)
+
+    admin_v4only_data.short_description = 'v4only data'
+
+    def admin_v6only_data(self, measurement):
+        response = yaml.dump(measurement.v6only_data)
+
+        # Get the Pygments formatter
+        formatter = HtmlFormatter(style='colorful')
+
+        # Highlight the data
+        response = highlight(response, YamlLexer(), formatter)
+
+        # Get the stylesheet
+        style = "<style>" + formatter.get_style_defs() + "</style><br>"
+
+        # Safe the output
+        return mark_safe(style + response)
+
+    admin_v6only_data.short_description = 'v6only data'
+
+    def admin_nat64_data(self, measurement):
+        response = yaml.dump(measurement.nat64_data)
+
+        # Get the Pygments formatter
+        formatter = HtmlFormatter(style='colorful')
+
+        # Highlight the data
+        response = highlight(response, YamlLexer(), formatter)
+
+        # Get the stylesheet
+        style = "<style>" + formatter.get_style_defs() + "</style><br>"
+
+        # Safe the output
+        return mark_safe(style + response)
+
+    admin_nat64_data.short_description = 'nat64 data'
 
     admin_images_inline.short_description = 'Images'

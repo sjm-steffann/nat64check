@@ -11,7 +11,7 @@ from v6score.models import Measurement, Website, is_valid_hostname
 def show_overview(request):
     measurements = Measurement.objects.all() \
                        .exclude(finished=None) \
-                       .exclude(v6only_score=None, nat64_score=None) \
+                       .exclude(v6only_image_score=None, nat64_image_score=None) \
                        .order_by('-finished')[:25]
     return render(request, 'v6score/overview.html', {
         'measurements': measurements,

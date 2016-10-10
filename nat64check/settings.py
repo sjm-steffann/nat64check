@@ -15,14 +15,7 @@ import os
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/1.10/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'k1mt3sz@t-ljxdhmzdzl#q94c()(5ro9q9^)l83*qne)w^p-oq'
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = []
 
@@ -77,8 +70,7 @@ WSGI_APPLICATION = 'nat64check.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
     }
 }
 
@@ -122,12 +114,9 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 WKHTMLTOIMAGE = '/usr/local/bin/wkhtmltoimage'
 IMAGE_WIDTH = 1024
 IMAGE_HEIGHT = 1024
-V4PROXY_HOST = 'v4only.proxy.ipv6-lab.net'
-V4PROXY_PORT = 80
-V6PROXY_HOST = 'v6only.proxy.ipv6-lab.net'
-V6PROXY_PORT = 80
-NAT64PROXY_HOST = 'nat64.proxy.ipv6-lab.net'
-NAT64PROXY_PORT = 80
+V4PROXY = 'http://v4only.proxy.ipv6-lab.net:80'
+V6PROXY = 'http://v6only.proxy.ipv6-lab.net:80'
+NAT64PROXY = 'http://nat64.proxy.ipv6-lab.net:80'
 
 # Override from local settings
 try:

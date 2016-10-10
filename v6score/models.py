@@ -1,19 +1,26 @@
+import base64
 import datetime
 import io
+import json
 import logging
 import os
 import re
 import signal
 import tempfile
+import time
 import warnings
+from collections import OrderedDict
 from subprocess import Popen, PIPE, TimeoutExpired
 
 import skimage.io
+import yaml
+from django.contrib.postgres.fields import JSONField
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.core.urlresolvers import reverse
 from django.db import models
 from django.utils import timezone
+from psycopg2.extras import register_default_json, register_default_jsonb
 from skimage.measure import compare_ssim
 
 from nat64check import settings
@@ -63,8 +70,10 @@ def ignore_signals():
 
 class Measurement(models.Model):
     website = models.ForeignKey(Website)
+
     manual = models.BooleanField(default=False)
     retry_for = models.ForeignKey('self', blank=True, null=True)
+
     requested = models.DateTimeField()
     started = models.DateTimeField(blank=True, null=True)
     finished = models.DateTimeField(blank=True, null=True)
@@ -73,8 +82,20 @@ class Measurement(models.Model):
     v6only_image = models.ImageField(upload_to=my_basedir, blank=True, null=True)
     nat64_image = models.ImageField(upload_to=my_basedir, blank=True, null=True)
 
-    v6only_score = models.FloatField(blank=True, null=True)
-    nat64_score = models.FloatField(blank=True, null=True)
+    v4only_data = JSONField(blank=True, null=True)
+    v4only_debug = models.TextField(blank=True)
+
+    v6only_data = JSONField(blank=True, null=True)
+    v6only_debug = models.TextField(blank=True)
+
+    nat64_data = JSONField(blank=True, null=True)
+    nat64_debug = models.TextField(blank=True)
+
+    v6only_image_score = models.FloatField(blank=True, null=True)
+    nat64_image_score = models.FloatField(blank=True, null=True)
+
+    v6only_resource_score = models.FloatField(blank=True, null=True)
+    nat64_resource_score = models.FloatField(blank=True, null=True)
 
     def __str__(self):
         prefix = 'Manual ' if self.manual else ''
@@ -89,6 +110,56 @@ class Measurement(models.Model):
 
     def get_absolute_url(self):
         return reverse('measurement', args=(self.pk,))
+
+    @property
+    def v6only_score(self):
+        if self.v6only_resource_score is None:
+            return self.v6only_image_score
+
+        return (self.v6only_image_score + self.v6only_resource_score) / 2
+
+    @property
+    def nat64_score(self):
+        if self.nat64_resource_score is None:
+            return self.nat64_image_score
+
+        return (self.nat64_image_score + self.nat64_resource_score) / 2
+
+    @property
+    def v4only_resources(self):
+        ok = 0
+        error = 0
+        for resource in self.v4only_data.get('resources', {}).values():
+            if resource.get('stage') == 'end' and not resource.get('error', True):
+                ok += 1
+            else:
+                error += 1
+
+        return ok, error
+
+    @property
+    def v6only_resources(self):
+        ok = 0
+        error = 0
+        for resource in self.v6only_data.get('resources', {}).values():
+            if resource.get('stage') == 'end' and not resource.get('error', True):
+                ok += 1
+            else:
+                error += 1
+
+        return ok, error
+
+    @property
+    def nat64_resources(self):
+        ok = 0
+        error = 0
+        for resource in self.nat64_data.get('resources', {}).values():
+            if resource.get('stage') == 'end' and not resource.get('error', True):
+                ok += 1
+            else:
+                error += 1
+
+        return ok, error
 
     def run_test(self):
         url = 'http://{}/'.format(self.website.hostname)
@@ -109,6 +180,7 @@ class Measurement(models.Model):
         ))
         common_options = [
             'phantomjs',
+            '--debug=true',
             '--ignore-ssl-errors=true',
             # This is the solution for upcoming versions of PhantomJS:
             # '--local-storage-quota=-1',
@@ -129,9 +201,11 @@ class Measurement(models.Model):
             # Do the v4-only, v6-only and the NAT64 request in parallel
             v4only_process = Popen(
                 common_options
-                + ['--local-storage-path=' + v4only_temp]
-                + [script, url, settings.V4PROXY_HOST, str(settings.V4PROXY_PORT)],
-                stdout=PIPE,
+                + ['--local-storage-path=' + v4only_temp,
+                   '--offline-storage-path=' + v4only_temp,
+                   '--proxy=' + settings.V4PROXY]
+                + [script, url],
+                stdout=PIPE, stderr=PIPE,
                 preexec_fn=ignore_signals,
                 cwd='/tmp'
             )
@@ -139,9 +213,11 @@ class Measurement(models.Model):
 
             v6only_process = Popen(
                 common_options
-                + ['--local-storage-path=' + v6only_temp]
-                + [script, url, settings.V6PROXY_HOST, str(settings.V6PROXY_PORT)],
-                stdout=PIPE,
+                + ['--local-storage-path=' + v6only_temp,
+                   '--offline-storage-path=' + v6only_temp,
+                   '--proxy=' + settings.V6PROXY]
+                + [script, url],
+                stdout=PIPE, stderr=PIPE,
                 preexec_fn=ignore_signals,
                 cwd='/tmp'
             )
@@ -149,103 +225,149 @@ class Measurement(models.Model):
 
             nat64_process = Popen(
                 common_options
-                + ['--local-storage-path=' + nat64_temp]
-                + [script, url, settings.NAT64PROXY_HOST, str(settings.NAT64PROXY_PORT)],
-                stdout=PIPE,
+                + ['--local-storage-path=' + nat64_temp,
+                   '--offline-storage-path=' + nat64_temp,
+                   '--proxy=' + settings.NAT64PROXY]
+                + [script, url],
+                stdout=PIPE, stderr=PIPE,
                 preexec_fn=ignore_signals,
                 cwd='/tmp'
             )
             logger.debug("Running {}".format(' '.join(nat64_process.args)))
 
+            # Placeholders
+            v4only_img = None
+            v4only_img_bytes = None
+            v6only_img = None
+            v6only_img_bytes = None
+            nat64_img = None
+            nat64_img_bytes = None
+
+            self.v4only_data = {}
+            self.v6only_data = {}
+            self.nat64_data = {}
+
             # Wait for tests to finish
-            timeout = 30
+            start_time = time.time()
+            full_timeout = 30
+            timeout = full_timeout
             try:
-                v4only_out = v4only_process.communicate(timeout=timeout)[0]
+                v4only_json, v4only_debug = v4only_process.communicate(timeout=timeout)
+                self.v4only_data = json.loads(
+                    v4only_json.decode('utf-8'),
+                    object_pairs_hook=OrderedDict
+                ) if v4only_json else {}
+                self.v4only_debug = v4only_debug.decode('utf-8')
+                if 'image' in self.v4only_data:
+                    if self.v4only_data['image']:
+                        v4only_img_bytes = base64.decodebytes(self.v4only_data['image'].encode('ascii'))
+                        # noinspection PyTypeChecker
+                        v4only_img = skimage.io.imread(io.BytesIO(v4only_img_bytes))
+                    del self.v4only_data['image']
+
             except TimeoutExpired:
                 logger.error("{}: IPv4-only load timed out".format(url))
                 v4only_process.kill()
-                v4only_out = None
 
-            if v4only_out:
-                try:
-                    v6only_out = v6only_process.communicate(timeout=timeout)[0]
-                except TimeoutExpired:
-                    logger.error("{}: IPv6-only load timed out".format(url))
-                    v6only_process.kill()
-                    v6only_out = None
-
-                try:
-                    nat64_out = nat64_process.communicate(timeout=timeout)[0]
-                except TimeoutExpired:
-                    logger.error("{}: NAT64 load timed out".format(url))
-                    nat64_process.kill()
-                    nat64_out = None
-            else:
+            timeout = full_timeout - (time.time() - start_time)
+            try:
+                v6only_json, v6only_debug = v6only_process.communicate(timeout=timeout)
+                self.v6only_data = json.loads(
+                    v6only_json.decode('utf-8'),
+                    object_pairs_hook=OrderedDict
+                ) if v6only_json else {}
+                self.v6only_debug = v6only_debug.decode('utf-8')
+                if 'image' in self.v6only_data:
+                    if self.v6only_data['image']:
+                        v6only_img_bytes = base64.decodebytes(self.v6only_data['image'].encode('ascii'))
+                        # noinspection PyTypeChecker
+                        v6only_img = skimage.io.imread(io.BytesIO(v6only_img_bytes))
+                    del self.v6only_data['image']
+            except TimeoutExpired:
+                logger.error("{}: IPv6-only load timed out".format(url))
                 v6only_process.kill()
-                v6only_out = None
 
+            timeout = full_timeout - (time.time() - start_time)
+            try:
+                nat64_json, nat64_debug = nat64_process.communicate(timeout=timeout)
+                self.nat64_data = json.loads(
+                    nat64_json.decode('utf-8'),
+                    object_pairs_hook=OrderedDict
+                ) if nat64_json else {}
+                self.nat64_debug = nat64_debug.decode('utf-8')
+                if 'image' in self.nat64_data:
+                    if self.nat64_data['image']:
+                        nat64_img_bytes = base64.decodebytes(self.nat64_data['image'].encode('ascii'))
+                        # noinspection PyTypeChecker
+                        nat64_img = skimage.io.imread(io.BytesIO(nat64_img_bytes))
+                    del self.nat64_data['image']
+            except TimeoutExpired:
+                logger.error("{}: NAT64 load timed out".format(url))
                 nat64_process.kill()
-                nat64_out = None
 
-        v4only_ok = v4only_out and v4only_process.returncode == 0
+        # Calculate score based on resources
+        self.v6only_resource_score = min(self.v6only_resources[0] / self.v4only_resources[0], 1)
+        logger.info("{}: IPv6-only Resource Score = {:0.2f}".format(url, self.v6only_resource_score))
+
+        self.nat64_resource_score = min(self.nat64_resources[0] / self.v4only_resources[0], 1)
+        logger.info("{}: NAT64 Resource Score = {:0.2f}".format(url, self.nat64_resource_score))
+
         return_value = 0
-        if v4only_ok:
+        if v4only_img_bytes:
             # Store the image
-            self.v4only_image.save('v4.png', ContentFile(v4only_out), save=False)
+            self.v4only_image.save('v4.png', ContentFile(v4only_img_bytes), save=False)
         else:
             return_value |= 1
 
-        v6only_ok = v6only_out and v6only_process.returncode == 0
-        if v6only_ok:
+        if v6only_img_bytes:
             # Store the image
-            self.v6only_image.save('v6.png', ContentFile(v6only_out), save=False)
+            self.v6only_image.save('v6.png', ContentFile(v6only_img_bytes), save=False)
         else:
             return_value |= 2
 
-        nat64_ok = nat64_out and nat64_process.returncode == 0
-        if nat64_ok:
+        if nat64_img_bytes:
             # Store the image
-            self.nat64_image.save('nat64.png', ContentFile(nat64_out), save=False)
+            self.nat64_image.save('nat64.png', ContentFile(nat64_img_bytes), save=False)
         else:
             return_value |= 4
 
-        if v4only_ok:
+        if v4only_img is not None:
             logger.debug("{}: Loading IPv4-only screenshot".format(url))
-            # noinspection PyTypeChecker
-            v4only_img = skimage.io.imread(io.BytesIO(v4only_out))
 
-            if v6only_ok:
+            if v6only_img is not None:
                 logger.debug("{}: Loading IPv6-only screenshot".format(url))
-                # noinspection PyTypeChecker
-                v6only_img = skimage.io.imread(io.BytesIO(v6only_out))
 
                 # Suppress stupid warnings
                 with warnings.catch_warnings(record=True):
-                    score = compare_ssim(v4only_img, v6only_img, multichannel=True)
-                    self.v6only_score = score
-                    logger.info("{}: IPv6-only Score = {:0.2f}".format(url, score))
+                    self.v6only_image_score = compare_ssim(v4only_img, v6only_img, multichannel=True)
+                    logger.info("{}: IPv6-only Image Score = {:0.2f}".format(url, self.v6only_image_score))
             else:
                 logger.warning("{}: did not load over IPv6-only, 0 score".format(url))
-                self.v6only_score = 0.0
+                self.v6only_image_score = 0.0
 
-            if nat64_ok:
+            if nat64_img is not None:
                 logger.debug("{}: Loading NAT64 screenshot".format(url))
-                # noinspection PyTypeChecker
-                nat64_img = skimage.io.imread(io.BytesIO(nat64_out))
 
                 # Suppress stupid warnings
                 with warnings.catch_warnings(record=True):
-                    score = compare_ssim(v4only_img, nat64_img, multichannel=True)
-                    self.nat64_score = score
-                    logger.info("{}: NAT64 Score = {:0.2f}".format(url, score))
+                    self.nat64_image_score = compare_ssim(v4only_img, nat64_img, multichannel=True)
+                    logger.info("{}: NAT64 Image Score = {:0.2f}".format(url, self.nat64_image_score))
             else:
                 logger.warning("{}: did not load over NAT64, 0 score".format(url))
-                self.nat64_score = 0.0
+                self.nat64_image_score = 0.0
 
         else:
-            logger.error("{}: did not load over IPv4-only, unable to perform test".format(url))
+            logger.error("{}: did not load over IPv4-only, unable to perform proper test".format(url))
 
         self.finished = timezone.now()
         self.save()
 
         return return_value
+
+
+# Proper representation with OrderedDict
+register_default_json(globally=True, loads=lambda s: json.loads(s, object_pairs_hook=OrderedDict))
+register_default_jsonb(globally=True, loads=lambda s: json.loads(s, object_pairs_hook=OrderedDict))
+
+yaml.add_representer(OrderedDict,
+                     lambda self, data: self.represent_mapping('tag:yaml.org,2002:map', data.items()))
