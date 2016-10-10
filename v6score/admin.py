@@ -127,6 +127,7 @@ class MeasurementAdmin(admin.ModelAdmin):
                        'admin_v6only_data', 'v6only_data', 'v6only_debug',
                        'admin_nat64_data', 'nat64_data', 'nat64_debug')
     actions = ('mark_pending_as_manual',)
+    search_fields = ('website__hostname',)
 
     fieldsets = [
         ('Test', {
