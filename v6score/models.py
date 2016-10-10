@@ -306,11 +306,15 @@ class Measurement(models.Model):
                 nat64_process.kill()
 
         # Calculate score based on resources
-        self.v6only_resource_score = min(self.v6only_resources[0] / self.v4only_resources[0], 1)
-        logger.info("{}: IPv6-only Resource Score = {:0.2f}".format(url, self.v6only_resource_score))
+        v4only_resources_ok = self.v4only_resources[0]
+        if v4only_resources_ok > 0:
+            self.v6only_resource_score = min(self.v6only_resources[0] / v4only_resources_ok, 1)
+            logger.info("{}: IPv6-only Resource Score = {:0.2f}".format(url, self.v6only_resource_score))
 
-        self.nat64_resource_score = min(self.nat64_resources[0] / self.v4only_resources[0], 1)
-        logger.info("{}: NAT64 Resource Score = {:0.2f}".format(url, self.nat64_resource_score))
+            self.nat64_resource_score = min(self.nat64_resources[0] / v4only_resources_ok, 1)
+            logger.info("{}: NAT64 Resource Score = {:0.2f}".format(url, self.nat64_resource_score))
+        else:
+            logger.error("{}: did not load over IPv4-only, unable to perform resource test".format(url))
 
         return_value = 0
         if v4only_img_bytes:
@@ -357,7 +361,7 @@ class Measurement(models.Model):
                 self.nat64_image_score = 0.0
 
         else:
-            logger.error("{}: did not load over IPv4-only, unable to perform proper test".format(url))
+            logger.error("{}: did not load over IPv4-only, unable to perform image test".format(url))
 
         self.finished = timezone.now()
         self.save()
