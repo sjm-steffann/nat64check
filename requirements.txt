@@ -4,3 +4,4 @@ ipython
 numpy
 scikit-image
 scipy
+pyyaml
