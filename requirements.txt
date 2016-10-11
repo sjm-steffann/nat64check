@@ -5,3 +5,7 @@ numpy
 scikit-image
 scipy
 pyyaml
+django_uwsgi
+django_debug_toolbar
+psycopg2
+pygments
