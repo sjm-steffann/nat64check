@@ -35,6 +35,18 @@
                 {% endif %}
             </tr>
             <tr>
+                <th>IPv6-only resource score:</th>
+                {% if measurement.v6only_resource_score == 0 %}
+                    <td class="no-score">Unreachable</td>
+                {% elif measurement.v6only_resource_score < 0.8 %}
+                    <td class="bad-score">{% widthratio measurement.v6only_resource_score 1 100 %}%</td>
+                {% elif measurement.v6only_score < 0.95 %}
+                    <td class="good-score">{% widthratio measurement.v6only_resource_score 1 100 %}%</td>
+                {% else %}
+                    <td class="perfect-score">{% widthratio measurement.v6only_resource_score 1 100 %}%</td>
+                {% endif %}
+            </tr>
+            <tr>
                 <th>NAT64 image score:</th>
 
                 {% if measurement.nat64_image_score == 0 %}
@@ -45,18 +57,6 @@
                     <td class="good-score">{% widthratio measurement.nat64_image_score 1 100 %}%</td>
                 {% else %}
                     <td class="perfect-score">{% widthratio measurement.nat64_image_score 1 100 %}%</td>
-                {% endif %}
-            </tr>
-            <tr>
-                <th>IPv6-only resource score:</th>
-                {% if measurement.v6only_resource_score == 0 %}
-                    <td class="no-score">Unreachable</td>
-                {% elif measurement.v6only_resource_score < 0.8 %}
-                    <td class="bad-score">{% widthratio measurement.v6only_resource_score 1 100 %}%</td>
-                {% elif measurement.v6only_score < 0.95 %}
-                    <td class="good-score">{% widthratio measurement.v6only_resource_score 1 100 %}%</td>
-                {% else %}
-                    <td class="perfect-score">{% widthratio measurement.v6only_resource_score 1 100 %}%</td>
                 {% endif %}
             </tr>
             <tr>
