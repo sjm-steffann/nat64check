@@ -11,6 +11,7 @@ import tempfile
 import time
 import warnings
 from collections import OrderedDict
+from ipaddress import ip_address
 from subprocess import Popen, PIPE, TimeoutExpired
 
 import skimage.io
@@ -207,11 +208,17 @@ class Measurement(models.Model):
         # Get DNS info
         try:
             a_records = subprocess.check_output(args=['dig', '+short', 'a', self.website.hostname],
-                                                stderr=subprocess.STDOUT)
+                                                stderr=subprocess.DEVNULL)
             aaaa_records = subprocess.check_output(args=['dig', '+short', 'aaaa', self.website.hostname],
-                                                   stderr=subprocess.STDOUT)
+                                                   stderr=subprocess.DEVNULL)
             dns_records = a_records + aaaa_records
-            self.dns_results = dns_records.decode('utf-8').strip().split()
+
+            self.dns_results = []
+            for line in dns_records.decode('utf-8').strip().split():
+                try:
+                    self.dns_results.append(str(ip_address(line)))
+                except ValueError:
+                    pass
         except subprocess.CalledProcessError:
             self.dns_results = []
 
