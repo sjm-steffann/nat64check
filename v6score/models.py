@@ -6,6 +6,7 @@ import logging
 import os
 import re
 import signal
+import subprocess
 import tempfile
 import time
 import warnings
@@ -15,6 +16,7 @@ from subprocess import Popen, PIPE, TimeoutExpired
 import skimage.io
 import yaml
 from django.contrib.postgres.fields import JSONField
+from django.contrib.postgres.fields.array import ArrayField
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.core.urlresolvers import reverse
@@ -43,6 +45,28 @@ def is_valid_hostname(hostname):
 def validate_hostname(hostname):
     if not is_valid_hostname(hostname):
         raise ValidationError("Invalid hostname")
+
+
+def ping(args):
+    try:
+        ping_output = subprocess.check_output(args=args, stderr=subprocess.STDOUT)
+        ping_latencies = {nr: 0 for nr in range(1, 6)}
+        for line in ping_output.decode('utf-8').split('\n'):
+            nr_match = re.search("icmp_seq=(\d+) ", line)
+            if nr_match:
+                nr = int(nr_match.group(1))
+            else:
+                continue
+
+            time_match = re.search("time=(\d+(\.(\d+))?) ms", line)
+            if time_match:
+                ping_latencies[nr] = float(time_match.group(1))
+            else:
+                ping_latencies[nr] = -1
+
+        return [ping_latencies[key] for key in sorted(ping_latencies.keys())]
+    except subprocess.CalledProcessError:
+        return []
 
 
 class Website(models.Model):
@@ -77,6 +101,13 @@ class Measurement(models.Model):
     requested = models.DateTimeField()
     started = models.DateTimeField(blank=True, null=True)
     finished = models.DateTimeField(blank=True, null=True)
+
+    dns_results = ArrayField(models.GenericIPAddressField(), blank=True, default=list)
+
+    ping4_latencies = ArrayField(models.FloatField(), blank=True, default=list)
+    ping4_1500_latencies = ArrayField(models.FloatField(), blank=True, default=list)
+    ping6_latencies = ArrayField(models.FloatField(), blank=True, default=list)
+    ping6_1500_latencies = ArrayField(models.FloatField(), blank=True, default=list)
 
     v4only_image = models.ImageField(upload_to=my_basedir, blank=True, null=True)
     v6only_image = models.ImageField(upload_to=my_basedir, blank=True, null=True)
@@ -172,6 +203,23 @@ class Measurement(models.Model):
 
         # Update started
         self.started = timezone.now()
+
+        # Get DNS info
+        try:
+            a_records = subprocess.check_output(args=['dig', '+short', 'a', self.website.hostname],
+                                                stderr=subprocess.STDOUT)
+            aaaa_records = subprocess.check_output(args=['dig', '+short', 'aaaa', self.website.hostname],
+                                                   stderr=subprocess.STDOUT)
+            dns_records = a_records + aaaa_records
+            self.dns_results = dns_records.decode('utf-8').strip().split()
+        except subprocess.CalledProcessError:
+            self.dns_results = []
+
+        # Ping
+        self.ping4_latencies = ping(['ping', '-c5', '-n', self.website.hostname])
+        self.ping4_1500_latencies = ping(['ping', '-c5', '-n', '-s1472', '-Mwant', self.website.hostname])
+        self.ping6_latencies = ping(['ping6', '-c5', '-n', self.website.hostname])
+        self.ping6_1500_latencies = ping(['ping6', '-c5', '-n', '-s1452', '-Mwant', self.website.hostname])
 
         # Common stuff
         script = os.path.realpath(os.path.join(
