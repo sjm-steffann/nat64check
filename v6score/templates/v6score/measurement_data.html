@@ -72,6 +72,72 @@
                     <td class="perfect-score">{% widthratio measurement.nat64_resource_score 1 100 %}%</td>
                 {% endif %}
             </tr>
+            <tr>
+                <th>DNS records</th>
+                <td>
+                    {% for address in measurement.dns_results %}
+                        {{ address }}<br>
+                    {% empty %}
+                        Unknown
+                    {% endfor %}
+                </td>
+            </tr>
+            <tr>
+                <th>IPv4 pings</th>
+                <td>
+                    {% for latency in measurement.ping4_latencies %}
+                        {% if latency == -1 %}
+                            lost<br>
+                        {% else %}
+                            {{ latency }} ms<br>
+                        {% endif %}
+                    {% empty %}
+                        No measurement
+                    {% endfor %}
+                </td>
+            </tr>
+            <tr>
+                <th>IPv4 pings (1500 byte packets)</th>
+                <td>
+                    {% for latency in measurement.ping4_1500_latencies %}
+                        {% if latency == -1 %}
+                            lost<br>
+                        {% else %}
+                            {{ latency }} ms<br>
+                        {% endif %}
+                    {% empty %}
+                        No measurement
+                    {% endfor %}
+                </td>
+            </tr>
+            <tr>
+                <th>IPv6 pings</th>
+                <td>
+                    {% for latency in measurement.ping6_latencies %}
+                        {% if latency == -1 %}
+                            lost<br>
+                        {% else %}
+                            {{ latency }} ms<br>
+                        {% endif %}
+                    {% empty %}
+                        No measurement
+                    {% endfor %}
+                </td>
+            </tr>
+            <tr>
+                <th>IPv6 pings (1500 byte packets)</th>
+                <td>
+                    {% for latency in measurement.ping6_1500_latencies %}
+                        {% if latency == -1 %}
+                            lost<br>
+                        {% else %}
+                            {{ latency }} ms<br>
+                        {% endif %}
+                    {% empty %}
+                        No measurement
+                    {% endfor %}
+                </td>
+            </tr>
         {% else %}
             <tr>
                 <th>No score:</th>
