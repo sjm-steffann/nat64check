@@ -111,7 +111,7 @@ class WebsiteAdmin(admin.ModelAdmin):
 
 @admin.register(Measurement)
 class MeasurementAdmin(admin.ModelAdmin):
-    list_display = ('website', 'manual', 'admin_is_retry', 'retry_for',
+    list_display = ('website', 'manual', 'admin_is_retry',
                     'requested', 'started', 'finished',
                     'admin_v6only_image_score', 'admin_nat64_image_score',
                     'admin_v6only_resource_score', 'admin_nat64_resource_score')
