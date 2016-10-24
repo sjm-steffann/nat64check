@@ -89,7 +89,8 @@
                         {% if latency == -1 %}
                             lost<br>
                         {% else %}
-                            {{ latency }} ms<br>
+                            {{ latency }} ms
+                            {% if not forloop.last %},{% endif %}
                         {% endif %}
                     {% empty %}
                         No measurement
@@ -103,7 +104,8 @@
                         {% if latency == -1 %}
                             lost<br>
                         {% else %}
-                            {{ latency }} ms<br>
+                            {{ latency }} ms
+                            {% if not forloop.last %},{% endif %}
                         {% endif %}
                     {% empty %}
                         No measurement
@@ -117,7 +119,8 @@
                         {% if latency == -1 %}
                             lost<br>
                         {% else %}
-                            {{ latency }} ms<br>
+                            {{ latency }} ms
+                            {% if not forloop.last %},{% endif %}
                         {% endif %}
                     {% empty %}
                         No measurement
@@ -131,7 +134,8 @@
                         {% if latency == -1 %}
                             lost<br>
                         {% else %}
-                            {{ latency }} ms<br>
+                            {{ latency }} ms
+                            {% if not forloop.last %},{% endif %}
                         {% endif %}
                     {% empty %}
                         No measurement
