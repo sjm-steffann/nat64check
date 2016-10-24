@@ -86,11 +86,13 @@
                 <th>IPv4 pings</th>
                 <td>
                     {% for latency in measurement.ping4_latencies %}
-                        {% if latency == -1 %}
-                            lost<br>
-                        {% else %}
-                            {{ latency }} ms{% if not forloop.last %},{% endif %}
-                        {% endif %}
+                        <span style="display: inline-block; width: 10vw">
+                            {% if latency == -1 %}
+                                lost<br>
+                            {% else %}
+                                {{ latency }} ms
+                            {% endif %}
+                        </span>
                     {% empty %}
                         No measurement
                     {% endfor %}
@@ -100,11 +102,13 @@
                 <th>IPv4 pings (1500 byte packets)</th>
                 <td>
                     {% for latency in measurement.ping4_1500_latencies %}
-                        {% if latency == -1 %}
-                            lost<br>
-                        {% else %}
-                            {{ latency }} ms{% if not forloop.last %},{% endif %}
-                        {% endif %}
+                        <span style="display: inline-block; width: 10vw">
+                            {% if latency == -1 %}
+                                lost<br>
+                            {% else %}
+                                {{ latency }} ms
+                            {% endif %}
+                        </span>
                     {% empty %}
                         No measurement
                     {% endfor %}
@@ -114,11 +118,13 @@
                 <th>IPv6 pings</th>
                 <td>
                     {% for latency in measurement.ping6_latencies %}
-                        {% if latency == -1 %}
-                            lost<br>
-                        {% else %}
-                            {{ latency }} ms{% if not forloop.last %},{% endif %}
-                        {% endif %}
+                        <span style="display: inline-block; width: 10vw">
+                            {% if latency == -1 %}
+                                lost<br>
+                            {% else %}
+                                {{ latency }} ms
+                            {% endif %}
+                        </span>
                     {% empty %}
                         No measurement
                     {% endfor %}
@@ -128,11 +134,13 @@
                 <th>IPv6 pings (1500 byte packets)</th>
                 <td>
                     {% for latency in measurement.ping6_1500_latencies %}
-                        {% if latency == -1 %}
-                            lost<br>
-                        {% else %}
-                            {{ latency }} ms{% if not forloop.last %},{% endif %}
-                        {% endif %}
+                        <span style="display: inline-block; width: 10vw">
+                            {% if latency == -1 %}
+                                lost<br>
+                            {% else %}
+                                {{ latency }} ms
+                            {% endif %}
+                        </span>
                     {% empty %}
                         No measurement
                     {% endfor %}
