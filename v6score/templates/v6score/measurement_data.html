@@ -90,7 +90,7 @@
                             {% if latency == -1 %}
                                 lost<br>
                             {% else %}
-                                {{ latency }} ms
+                                {{ latency|floatformat:3 }} ms
                             {% endif %}
                         </span>
                     {% empty %}
@@ -106,7 +106,7 @@
                             {% if latency == -1 %}
                                 lost<br>
                             {% else %}
-                                {{ latency }} ms
+                                {{ latency|floatformat:3 }} ms
                             {% endif %}
                         </span>
                     {% empty %}
@@ -122,7 +122,7 @@
                             {% if latency == -1 %}
                                 lost<br>
                             {% else %}
-                                {{ latency }} ms
+                                {{ latency|floatformat:3 }} ms
                             {% endif %}
                         </span>
                     {% empty %}
@@ -138,7 +138,7 @@
                             {% if latency == -1 %}
                                 lost<br>
                             {% else %}
-                                {{ latency }} ms
+                                {{ latency|floatformat:3 }} ms
                             {% endif %}
                         </span>
                     {% empty %}
