@@ -105,6 +105,8 @@
                         <span style="display: inline-block; width: 10vw">
                             {% if latency == -1 %}
                                 lost<br>
+                            {% elif latency == -2 %}
+                                filtered<br>
                             {% else %}
                                 {{ latency|floatformat:3 }} ms
                             {% endif %}

@@ -49,25 +49,23 @@ def validate_hostname(hostname):
 
 
 def ping(args):
-    try:
-        ping_output = subprocess.check_output(args=args, stderr=subprocess.STDOUT)
-        ping_latencies = {nr: 0 for nr in range(1, 6)}
-        for line in ping_output.decode('utf-8').split('\n'):
-            nr_match = re.search("icmp_seq=(\d+) ", line)
-            if nr_match:
-                nr = int(nr_match.group(1))
-            else:
-                continue
+    ping_result = subprocess.run(args=args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=False)
+    ping_latencies = {nr: -1 for nr in range(1, 6)}
+    for line in ping_result.stdout.decode('utf-8').split('\n'):
+        nr_match = re.search("icmp_seq=(\d+) ", line)
+        if nr_match:
+            nr = int(nr_match.group(1))
+        else:
+            continue
 
-            time_match = re.search("time=(\d+(\.(\d+))?) ms", line)
-            if time_match:
-                ping_latencies[nr] = float(time_match.group(1))
-            else:
-                ping_latencies[nr] = -1
+        time_match = re.search("time=(\d+(\.(\d+))?) ms", line)
+        if time_match:
+            ping_latencies[nr] = float(time_match.group(1))
+        else:
+            if 'filtered' in line:
+                ping_latencies[nr] = -2
 
-        return [ping_latencies[key] for key in sorted(ping_latencies.keys())]
-    except subprocess.CalledProcessError:
-        return []
+    return [ping_latencies[key] for key in sorted(ping_latencies.keys())]
 
 
 class Website(models.Model):
