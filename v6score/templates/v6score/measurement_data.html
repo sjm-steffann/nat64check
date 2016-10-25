@@ -85,73 +85,37 @@
             <tr>
                 <th>IPv4 pings</th>
                 <td>
-                    {% for latency in measurement.ping4_latencies %}
-                        <span style="display: inline-block; width: 10vw">
-                            {% if latency == -1 %}
-                                <span style="color: red">lost</span><br>
-                            {% elif latency == -2 %}
-                                <span style="color: orange">filtered</span><br>
-                            {% else %}
-                                {{ latency|floatformat:3 }} ms
-                            {% endif %}
-                        </span>
-                    {% empty %}
-                        No measurement
-                    {% endfor %}
+                    {% include 'v6score/latency_data.html' with latencies=measurement.ping4_latencies %}
                 </td>
             </tr>
             <tr>
                 <th>IPv4 pings (1500 byte packets)</th>
                 <td>
-                    {% for latency in measurement.ping4_1500_latencies %}
-                        <span style="display: inline-block; width: 10vw">
-                            {% if latency == -1 %}
-                                <span style="color: red">lost</span><br>
-                            {% elif latency == -2 %}
-                                <span style="color: orange">filtered</span><br>
-                            {% else %}
-                                {{ latency|floatformat:3 }} ms
-                            {% endif %}
-                        </span>
-                    {% empty %}
-                        No measurement
-                    {% endfor %}
+                    {% include 'v6score/latency_data.html' with latencies=measurement.ping4_1500_latencies %}
+                </td>
+            </tr>
+            <tr>
+                <th>IPv4 pings (2000 byte "packets")</th>
+                <td>
+                    {% include 'v6score/latency_data.html' with latencies=measurement.ping4_2000_latencies %}
                 </td>
             </tr>
             <tr>
                 <th>IPv6 pings</th>
                 <td>
-                    {% for latency in measurement.ping6_latencies %}
-                        <span style="display: inline-block; width: 10vw">
-                            {% if latency == -1 %}
-                                <span style="color: red">lost</span><br>
-                            {% elif latency == -2 %}
-                                <span style="color: orange">filtered</span><br>
-                            {% else %}
-                                {{ latency|floatformat:3 }} ms
-                            {% endif %}
-                        </span>
-                    {% empty %}
-                        No measurement
-                    {% endfor %}
+                    {% include 'v6score/latency_data.html' with latencies=measurement.ping6_latencies %}
                 </td>
             </tr>
             <tr>
                 <th>IPv6 pings (1500 byte packets)</th>
                 <td>
-                    {% for latency in measurement.ping6_1500_latencies %}
-                        <span style="display: inline-block; width: 10vw">
-                            {% if latency == -1 %}
-                                <span style="color: red">lost</span><br>
-                            {% elif latency == -2 %}
-                                <span style="color: orange">filtered</span><br>
-                            {% else %}
-                                {{ latency|floatformat:3 }} ms
-                            {% endif %}
-                        </span>
-                    {% empty %}
-                        No measurement
-                    {% endfor %}
+                    {% include 'v6score/latency_data.html' with latencies=measurement.ping6_1500_latencies %}
+                </td>
+            </tr>
+            <tr>
+                <th>IPv6 pings (2000 byte "packets")</th>
+                <td>
+                    {% include 'v6score/latency_data.html' with latencies=measurement.ping6_2000_latencies %}
                 </td>
             </tr>
         {% else %}
