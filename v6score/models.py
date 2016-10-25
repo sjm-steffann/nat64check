@@ -12,7 +12,7 @@ import time
 import warnings
 from collections import OrderedDict
 from ipaddress import ip_address
-from subprocess import Popen, PIPE, TimeoutExpired
+from typing import List, Iterable
 
 import skimage.io
 import yaml
@@ -48,10 +48,18 @@ def validate_hostname(hostname):
         raise ValidationError("Invalid hostname")
 
 
-def ping(args):
-    ping_result = subprocess.run(args=args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=False)
+def start_ping(args: Iterable) -> subprocess.Popen:
+    return subprocess.Popen(
+        args=args,
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        preexec_fn=ignore_signals,
+        cwd='/tmp'
+    )
+
+
+def parse_ping(ping_output: bytes) -> List:
     ping_latencies = {nr: -1 for nr in range(1, 6)}
-    for line in ping_result.stdout.decode('utf-8').split('\n'):
+    for line in ping_output.decode('utf-8').split('\n'):
         nr_match = re.search("icmp_seq=(\d+) ", line)
         if nr_match:
             nr = int(nr_match.group(1))
@@ -105,8 +113,10 @@ class Measurement(models.Model):
 
     ping4_latencies = ArrayField(models.FloatField(), blank=True, default=list)
     ping4_1500_latencies = ArrayField(models.FloatField(), blank=True, default=list)
+    ping4_2000_latencies = ArrayField(models.FloatField(), blank=True, default=list)
     ping6_latencies = ArrayField(models.FloatField(), blank=True, default=list)
     ping6_1500_latencies = ArrayField(models.FloatField(), blank=True, default=list)
+    ping6_2000_latencies = ArrayField(models.FloatField(), blank=True, default=list)
 
     v4only_image = models.ImageField(upload_to=my_basedir, blank=True, null=True)
     v6only_image = models.ImageField(upload_to=my_basedir, blank=True, null=True)
@@ -221,10 +231,20 @@ class Measurement(models.Model):
             self.dns_results = []
 
         # Ping
-        self.ping4_latencies = ping(['ping', '-c5', '-n', self.website.hostname])
-        self.ping4_1500_latencies = ping(['ping', '-c5', '-n', '-s1472', '-Mwant', self.website.hostname])
-        self.ping6_latencies = ping(['ping6', '-c5', '-n', self.website.hostname])
-        self.ping6_1500_latencies = ping(['ping6', '-c5', '-n', '-s1452', '-Mwant', self.website.hostname])
+
+        ping4_process = start_ping(['ping', '-c5', '-n', self.website.hostname])
+        ping4_1500_process = start_ping(['ping', '-c5', '-n', '-s1472', '-Mwant', self.website.hostname])
+        ping4_2000_process = start_ping(['ping', '-c5', '-n', '-s1972', '-Mwant', self.website.hostname])
+        ping6_process = start_ping(['ping6', '-c5', '-n', self.website.hostname])
+        ping6_1500_process = start_ping(['ping6', '-c5', '-n', '-s1452', '-Mwant', self.website.hostname])
+        ping6_2000_process = start_ping(['ping6', '-c5', '-n', '-s1952', '-Mwant', self.website.hostname])
+
+        self.ping4_latencies = parse_ping(ping4_process.communicate()[0])
+        self.ping4_1500_latencies = parse_ping(ping4_1500_process.communicate()[0])
+        self.ping4_2000_latencies = parse_ping(ping4_2000_process.communicate()[0])
+        self.ping6_latencies = parse_ping(ping6_process.communicate()[0])
+        self.ping6_1500_latencies = parse_ping(ping6_1500_process.communicate()[0])
+        self.ping6_2000_latencies = parse_ping(ping6_2000_process.communicate()[0])
 
         # Common stuff
         script = os.path.realpath(os.path.join(
@@ -252,37 +272,37 @@ class Measurement(models.Model):
             os.makedirs(nat64_temp)
 
             # Do the v4-only, v6-only and the NAT64 request in parallel
-            v4only_process = Popen(
+            v4only_process = subprocess.Popen(
                 common_options
                 + ['--local-storage-path=' + v4only_temp,
                    '--offline-storage-path=' + v4only_temp,
                    '--proxy=' + settings.V4PROXY]
                 + [script, url],
-                stdout=PIPE, stderr=PIPE,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                 preexec_fn=ignore_signals,
                 cwd='/tmp'
             )
             logger.debug("Running {}".format(' '.join(v4only_process.args)))
 
-            v6only_process = Popen(
+            v6only_process = subprocess.Popen(
                 common_options
                 + ['--local-storage-path=' + v6only_temp,
                    '--offline-storage-path=' + v6only_temp,
                    '--proxy=' + settings.V6PROXY]
                 + [script, url],
-                stdout=PIPE, stderr=PIPE,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                 preexec_fn=ignore_signals,
                 cwd='/tmp'
             )
             logger.debug("Running {}".format(' '.join(v6only_process.args)))
 
-            nat64_process = Popen(
+            nat64_process = subprocess.Popen(
                 common_options
                 + ['--local-storage-path=' + nat64_temp,
                    '--offline-storage-path=' + nat64_temp,
                    '--proxy=' + settings.NAT64PROXY]
                 + [script, url],
-                stdout=PIPE, stderr=PIPE,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                 preexec_fn=ignore_signals,
                 cwd='/tmp'
             )
@@ -318,7 +338,7 @@ class Measurement(models.Model):
                         v4only_img = skimage.io.imread(io.BytesIO(v4only_img_bytes))
                     del self.v4only_data['image']
 
-            except TimeoutExpired:
+            except subprocess.TimeoutExpired:
                 logger.error("{}: IPv4-only load timed out".format(url))
                 v4only_process.kill()
 
@@ -336,7 +356,7 @@ class Measurement(models.Model):
                         # noinspection PyTypeChecker
                         v6only_img = skimage.io.imread(io.BytesIO(v6only_img_bytes))
                     del self.v6only_data['image']
-            except TimeoutExpired:
+            except subprocess.TimeoutExpired:
                 logger.error("{}: IPv6-only load timed out".format(url))
                 v6only_process.kill()
 
@@ -354,7 +374,7 @@ class Measurement(models.Model):
                         # noinspection PyTypeChecker
                         nat64_img = skimage.io.imread(io.BytesIO(nat64_img_bytes))
                     del self.nat64_data['image']
-            except TimeoutExpired:
+            except subprocess.TimeoutExpired:
                 logger.error("{}: NAT64 load timed out".format(url))
                 nat64_process.kill()
 
