@@ -73,6 +73,11 @@ def parse_ping(ping_output: bytes) -> List:
             if 'filtered' in line:
                 ping_latencies[nr] = -2
 
+    # Some ping implementations start counting at 0
+    # If so, nr goes from 0-4 instead of 1-5
+    if 0 in ping_latencies:
+        del ping_latencies[5]
+
     return [ping_latencies[key] for key in sorted(ping_latencies.keys())]
 
 
@@ -231,7 +236,6 @@ class Measurement(models.Model):
             self.dns_results = []
 
         # Ping
-
         ping4_process = start_ping(['ping', '-c5', '-n', self.website.hostname])
         ping4_1500_process = start_ping(['ping', '-c5', '-n', '-s1472', '-Mwant', self.website.hostname])
         ping4_2000_process = start_ping(['ping', '-c5', '-n', '-s1972', '-Mwant', self.website.hostname])
