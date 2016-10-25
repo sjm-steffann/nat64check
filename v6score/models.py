@@ -244,11 +244,22 @@ class Measurement(models.Model):
         ping6_2000_process = start_ping(['ping6', '-c5', '-n', '-s1952', '-Mwant', self.website.hostname])
 
         self.ping4_latencies = parse_ping(ping4_process.communicate()[0])
+        logger.info("Ping IPv4 results: {}".format(self.ping4_latencies))
+
         self.ping4_1500_latencies = parse_ping(ping4_1500_process.communicate()[0])
+        logger.info("Ping IPv4 (1500) results: {}".format(self.ping4_1500_latencies))
+
         self.ping4_2000_latencies = parse_ping(ping4_2000_process.communicate()[0])
+        logger.info("Ping IPv4 (2000) results: {}".format(self.ping4_2000_latencies))
+
         self.ping6_latencies = parse_ping(ping6_process.communicate()[0])
+        logger.info("Ping IPv6 results: {}".format(self.ping6_latencies))
+
         self.ping6_1500_latencies = parse_ping(ping6_1500_process.communicate()[0])
+        logger.info("Ping IPv6 (1500) results: {}".format(self.ping6_1500_latencies))
+
         self.ping6_2000_latencies = parse_ping(ping6_2000_process.communicate()[0])
+        logger.info("Ping IPv6 (2000) results: {}".format(self.ping6_2000_latencies))
 
         # Common stuff
         script = os.path.realpath(os.path.join(
