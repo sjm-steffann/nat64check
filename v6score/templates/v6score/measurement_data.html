@@ -88,9 +88,9 @@
                     {% for latency in measurement.ping4_latencies %}
                         <span style="display: inline-block; width: 10vw">
                             {% if latency == -1 %}
-                                lost<br>
+                                <span style="color: red">lost</span><br>
                             {% elif latency == -2 %}
-                                filtered<br>
+                                <span style="color: orange">filtered</span><br>
                             {% else %}
                                 {{ latency|floatformat:3 }} ms
                             {% endif %}
@@ -106,9 +106,9 @@
                     {% for latency in measurement.ping4_1500_latencies %}
                         <span style="display: inline-block; width: 10vw">
                             {% if latency == -1 %}
-                                lost<br>
+                                <span style="color: red">lost</span><br>
                             {% elif latency == -2 %}
-                                filtered<br>
+                                <span style="color: orange">filtered</span><br>
                             {% else %}
                                 {{ latency|floatformat:3 }} ms
                             {% endif %}
@@ -124,9 +124,9 @@
                     {% for latency in measurement.ping6_latencies %}
                         <span style="display: inline-block; width: 10vw">
                             {% if latency == -1 %}
-                                lost<br>
+                                <span style="color: red">lost</span><br>
                             {% elif latency == -2 %}
-                                filtered<br>
+                                <span style="color: orange">filtered</span><br>
                             {% else %}
                                 {{ latency|floatformat:3 }} ms
                             {% endif %}
@@ -142,9 +142,9 @@
                     {% for latency in measurement.ping6_1500_latencies %}
                         <span style="display: inline-block; width: 10vw">
                             {% if latency == -1 %}
-                                lost<br>
+                                <span style="color: red">lost</span><br>
                             {% elif latency == -2 %}
-                                filtered<br>
+                                <span style="color: orange">filtered</span><br>
                             {% else %}
                                 {{ latency|floatformat:3 }} ms
                             {% endif %}
