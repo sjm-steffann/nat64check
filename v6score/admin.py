@@ -1,6 +1,7 @@
 import yaml
 from django.contrib import admin
 from django.db.models.aggregates import Avg, Count, Max, Min
+from django.utils import timezone
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from pygments import highlight
@@ -129,7 +130,7 @@ class MeasurementAdmin(admin.ModelAdmin):
                        'admin_v4only_data', 'v4only_data', 'v4only_debug',
                        'admin_v6only_data', 'v6only_data', 'v6only_debug',
                        'admin_nat64_data', 'nat64_data', 'nat64_debug')
-    actions = ('mark_pending_as_manual',)
+    actions = ('mark_pending_as_manual', 'reschedule_test',)
     search_fields = ('website__hostname',)
 
     fieldsets = [
@@ -166,6 +167,18 @@ class MeasurementAdmin(admin.ModelAdmin):
         pending = queryset.filter(started=None)
         pending.update(manual=True)
         self.message_user(request, "{} pending measurements marked as manual".format(pending.count()))
+
+    # noinspection PyMethodMayBeStatic
+    def reschedule_test(self, request, queryset):
+        count = 0
+        for measurement in queryset:
+            new_measurement = Measurement(website=measurement.website,
+                                          requested=timezone.now(),
+                                          retry_for=measurement)
+            new_measurement.save()
+            count += 1
+
+        self.message_user(request, "{} measurements rescheduled".format(count))
 
     def admin_is_retry(self, obj):
         return obj.retry_for is not None
