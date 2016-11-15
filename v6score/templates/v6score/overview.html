@@ -2,17 +2,16 @@
 {% load static %}
 
 {% block content %}
-    <form method="post" action="{% url 'request' %}" style="text-align: center; margin-top: 70px;">
+    <form method="post" action="{% url 'request' %}" class="search-box">
         <img alt="nat64check" src="{% static 'img/nat64check-logo.png' %}"><br>
-        <div style="margin-top: 50px; width: 600px; text-align: left; position: relative; display: inline-block; border: 1px solid #ccc; border-radius: 30px; box-shadow: 2px 2px 4px #666">
-            <div style="width: 460px; margin: 20px 30px; font-size: 25px">
-                http://<input style="border: 0; width: 370px; font-size: 25px" title="website" name="hostname" placeholder="www.example.com" value="{{ hostname }}">
+        <div class="centre-search-box">
+            <div class="search-box-input">
+                http://<input title="website" name="hostname" placeholder="www.example.com" value="{{ hostname }}">
             </div>
-            <div style="position: absolute; right: -2px; top: -1px; bottom: -1px; width: 70px; background: #26aa4f; border: 2px solid #26aa4f; border-top-right-radius: 30px; border-bottom-right-radius: 30px">
-                <button style="border: 0; background: none; margin: 0; padding: 0; cursor: pointer;"><img alt="Search"
-                                                                                                          title="Search"
-                                                                                                          src="{% static 'img/checkmark.png' %}"
-                                                                                                          style="margin: 16px 10px">
+            <div class="search-box-submit">
+                <button><img alt="Search"
+                             title="Search"
+                             src="{% static 'img/checkmark.png' %}">
                 </button>
             </div>
         </div>
