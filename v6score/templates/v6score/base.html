@@ -5,9 +5,10 @@
         <title>IPv6 website tester</title>
         <style>
             body {
-                font-family: "Roboto", "Lucida Grande", "DejaVu Sans", "Bitstream Vera Sans", Verdana, Arial, sans-serif;
+                font-family: "Helvetica Neue", "Helvetica", Arial, sans-serif;
+                font-size: 16px;
                 padding: 0;
-                margin: 15px;
+                margin: 0;
             }
 
             h1 {
@@ -52,8 +53,7 @@
             ul.messages li {
                 display: block;
                 font-weight: bold;
-                font-size: 13px;
-                margin: -10px -15px 15px -15px;
+                margin: 0;
                 padding: 15px;
                 background: #dfd;
                 color: #333;
@@ -69,9 +69,6 @@
         </style>
     </head>
     <body>
-
-        <h1>IPv6 website tester</h1>
-
         {% if messages %}
             <ul class="messages">
                 {% for message in messages %}

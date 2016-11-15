@@ -162,6 +162,19 @@
             </tr>
         </table>
     {% endif %}
+
+    <br>
+
+    <form method="post" action="{% url 'request' %}">
+        {% csrf_token %}
+        <input type="hidden" name="hostname" value="{{ hostname }}">
+        <input type="hidden" name="force_new" value="1">
+
+        Not happy? Fix your website and
+        <button type="submit">test again</button>
+        !
+    </form>
+
 {% else %}
     <script type="application/javascript">
         setTimeout(function () {
