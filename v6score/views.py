@@ -38,49 +38,32 @@ def show_overview(request):
 
     if nat64_selected:
         if poor_selected:
-            measurements = measurements.filter(Q(nat64_image_score__lt=0.8) |
-                                               Q(nat64_resource_score__lt=0.8))
+            measurements = measurements.filter(nat64_image_score__lt=0.8)
         elif good_selected:
-            measurements = measurements.filter(Q(nat64_image_score__gte=0.8, nat64_image_score__lt=0.95) |
-                                               Q(nat64_resource_score__gte=0.8, nat64_resource_score__lt=0.95))
+            measurements = measurements.filter(nat64_image_score__gte=0.8, nat64_image_score__lt=0.95)
         elif perfect_selected:
-            measurements = measurements.filter(Q(nat64_image_score__gte=0.95) |
-                                               Q(nat64_resource_score__gte=0.95))
+            measurements = measurements.filter(nat64_image_score__gte=0.95)
         else:
-            measurements = measurements.exclude(Q(nat64_image_score=None) |
-                                                Q(nat64_resource_score=None))
+            measurements = measurements.exclude(nat64_image_score=None)
     elif ipv6_selected:
         if poor_selected:
-            measurements = measurements.filter(Q(v6only_image_score__lt=0.8) |
-                                               Q(v6only_resource_score__lt=0.8))
+            measurements = measurements.filter(v6only_image_score__lt=0.8)
         elif good_selected:
-            measurements = measurements.filter(Q(v6only_image_score__gte=0.8, v6only_image_score__lt=0.95) |
-                                               Q(v6only_resource_score__gte=0.8, v6only_resource_score__lt=0.95))
+            measurements = measurements.filter(v6only_image_score__gte=0.8, v6only_image_score__lt=0.95)
         elif perfect_selected:
-            measurements = measurements.filter(Q(v6only_image_score__gte=0.95) |
-                                               Q(v6only_resource_score__gte=0.95))
+            measurements = measurements.filter(v6only_image_score__gte=0.95)
         else:
-            measurements = measurements.exclude(Q(v6only_image_score=None) |
-                                                Q(v6only_resource_score=None))
+            measurements = measurements.exclude(v6only_image_score=None)
     else:
         if poor_selected:
-            measurements = measurements.filter(Q(nat64_image_score__lt=0.8,
-                                                 v6only_image_score__lt=0.8) |
-                                               Q(nat64_resource_score__lt=0.8,
-                                                 v6only_resource_score__lt=0.8))
+            measurements = measurements.filter(Q(nat64_image_score__lt=0.8) | Q(v6only_image_score__lt=0.8))
         elif good_selected:
             measurements = measurements.filter(Q(nat64_image_score__gte=0.8, nat64_image_score__lt=0.95,
-                                                 v6only_image_score__gte=0.8, v6only_image_score__lt=0.95) |
-                                               Q(nat64_resource_score__gte=0.8, nat64_resource_score__lt=0.95,
-                                                 v6only_resource_score__gte=0.8, v6only_resource_score__lt=0.95))
+                                                 v6only_image_score__gte=0.8) |
+                                               Q(v6only_image_score__gte=0.8, v6only_image_score__lt=0.95,
+                                                 nat64_image_score__gte=0.8))
         elif perfect_selected:
-            measurements = measurements.filter(Q(nat64_image_score__gte=0.95,
-                                                 v6only_image_score__gte=0.95) |
-                                               Q(v6only_resource_score__gte=0.95,
-                                                 nat64_resource_score__gte=0.95))
-        else:
-            measurements = measurements.exclude(Q(nat64_image_score=None, v6only_image_score=None) |
-                                                Q(nat64_resource_score=None, v6only_resource_score=None))
+            measurements = measurements.filter(nat64_image_score__gte=0.95, v6only_image_score__gte=0.95)
 
     return render(request, 'v6score/overview.html', {
         'url_form': url_form,

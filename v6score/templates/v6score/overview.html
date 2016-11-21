@@ -6,7 +6,7 @@
 
     <form method="post" class="search-box">
         <div class="centre-search-box">
-            Run test: {{ url_form.url }}
+            Check: {{ url_form.url }}
             {{ url_form.url.errors }}
             <div class="search-box-submit">
                 <button><span class="fa fa-check"></span></button>
@@ -63,7 +63,7 @@
                 <th>URL</th>
                 <th>When</th>
                 <th>NAT64</th>
-                <th>IPv6</th>
+                <th>IPv6-only</th>
             </tr>
             {% for measurement in measurements %}
                 <tr>
@@ -73,24 +73,24 @@
 
                     <td>{{ measurement.finished }}</td>
 
-                    {% if measurement.nat64_score == 0 %}
+                    {% if measurement.nat64_image_score == 0 %}
                         <td class="no-score">Unreachable</td>
-                    {% elif measurement.nat64_score < 0.8 %}
-                        <td class="bad-score">{% widthratio measurement.nat64_score 1 100 %}%</td>
-                    {% elif measurement.nat64_score < 0.95 %}
-                        <td class="good-score">{% widthratio measurement.nat64_score 1 100 %}%</td>
+                    {% elif measurement.nat64_image_score < 0.8 %}
+                        <td class="bad-score">{% widthratio measurement.nat64_image_score 1 100 %}%</td>
+                    {% elif measurement.nat64_image_score < 0.95 %}
+                        <td class="good-score">{% widthratio measurement.nat64_image_score 1 100 %}%</td>
                     {% else %}
-                        <td class="perfect-score">{% widthratio measurement.nat64_score 1 100 %}%</td>
+                        <td class="perfect-score">{% widthratio measurement.nat64_image_score 1 100 %}%</td>
                     {% endif %}
 
-                    {% if measurement.v6only_score == 0 %}
+                    {% if measurement.v6only_image_score == 0 %}
                         <td class="no-score">Unreachable</td>
-                    {% elif measurement.v6only_score < 0.8 %}
-                        <td class="bad-score">{% widthratio measurement.v6only_score 1 100 %}%</td>
-                    {% elif measurement.v6only_score < 0.95 %}
-                        <td class="good-score">{% widthratio measurement.v6only_score 1 100 %}%</td>
+                    {% elif measurement.v6only_image_score < 0.8 %}
+                        <td class="bad-score">{% widthratio measurement.v6only_image_score 1 100 %}%</td>
+                    {% elif measurement.v6only_image_score < 0.95 %}
+                        <td class="good-score">{% widthratio measurement.v6only_image_score 1 100 %}%</td>
                     {% else %}
-                        <td class="perfect-score">{% widthratio measurement.v6only_score 1 100 %}%</td>
+                        <td class="perfect-score">{% widthratio measurement.v6only_image_score 1 100 %}%</td>
                     {% endif %}
                 </tr>
             {% endfor %}
