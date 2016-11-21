@@ -14,6 +14,7 @@ stop = False
 count = 0
 
 
+# noinspection PyUnusedLocal
 def handle_signal(*args, **kwargs):
     global stop
     stop = True

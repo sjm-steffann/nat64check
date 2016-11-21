@@ -7,18 +7,18 @@ import os
 import re
 import signal
 import subprocess
-import tempfile
 import time
 import warnings
 from collections import OrderedDict
+from datetime import timedelta
 from ipaddress import ip_address
 from typing import List, Iterable
+from urllib.parse import urlparse
 
 import skimage.io
 import yaml
 from django.contrib.postgres.fields import JSONField
 from django.contrib.postgres.fields.array import ArrayField
-from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.core.urlresolvers import reverse
 from django.db import models
@@ -29,23 +29,6 @@ from skimage.measure import compare_ssim
 from nat64check import settings
 
 logger = logging.getLogger(__name__)
-
-
-def is_valid_hostname(hostname):
-    if not (0 < len(hostname) < 255):
-        return False
-    if hostname[-1] == ".":
-        hostname = hostname[:-1]  # strip exactly one dot from the right, if present
-    allowed = re.compile("^(?!-)[A-Z\d-]{1,63}(?<!-)$", re.IGNORECASE)
-    parts = hostname.split(".")
-    if len(parts) < 2:
-        return False
-    return all(allowed.match(x) for x in parts)
-
-
-def validate_hostname(hostname):
-    if not is_valid_hostname(hostname):
-        raise ValidationError("Invalid hostname")
 
 
 def start_ping(args: Iterable) -> subprocess.Popen:
@@ -81,19 +64,8 @@ def parse_ping(ping_output: bytes) -> List:
     return [ping_latencies[key] for key in sorted(ping_latencies.keys())]
 
 
-class Website(models.Model):
-    hostname = models.CharField(max_length=128, unique=True, validators=[validate_hostname])
-    hash_param = models.CharField(max_length=128, blank=True)
-
-    def __str__(self):
-        return self.hostname
-
-    class Meta:
-        ordering = ('hostname',)
-
-
 def my_basedir(instance, filename):
-    return 'capture/{}/{}/{}'.format(instance.website.hostname,
+    return 'capture/{}/{}/{}'.format(instance.hostname,
                                      datetime.datetime.now().strftime('%Y-%m-%d/%H-%M'),
                                      filename)
 
@@ -104,8 +76,29 @@ def ignore_signals():
     signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 
+class MeasurementManager(models.Manager):
+    @staticmethod
+    def get_measurement_for_url(url, force_new=False):
+        measurement = Measurement.objects.filter(url=url, finished=None).order_by('requested').first()
+        if measurement:
+            if not measurement.manual:
+                # Mark as manual
+                measurement.manual = True
+
+            measurement.requested = timezone.now()
+            measurement.save()
+        else:
+            recent = timezone.now() - timedelta(minutes=10)
+            measurement = Measurement.objects.filter(url=url, finished__gt=recent).order_by('-finished').first()
+            if not measurement or force_new:
+                measurement = Measurement(url=url, requested=timezone.now(), manual=True)
+                measurement.save()
+
+        return measurement
+
+
 class Measurement(models.Model):
-    website = models.ForeignKey(Website)
+    url = models.URLField()
 
     manual = models.BooleanField(default=False)
     retry_for = models.ForeignKey('self', blank=True, null=True)
@@ -142,19 +135,26 @@ class Measurement(models.Model):
     v6only_resource_score = models.FloatField(blank=True, null=True)
     nat64_resource_score = models.FloatField(blank=True, null=True)
 
+    objects = MeasurementManager()
+
     def __str__(self):
         prefix = 'Manual ' if self.manual else ''
         prefix += 'Retry ' if self.retry_for else ''
 
         if self.finished:
-            return prefix + 'Test #{}: {} finished at {}'.format(self.pk, self.website.hostname, self.finished)
+            return prefix + 'Test #{}: {} finished at {}'.format(self.pk, self.url, self.finished)
         elif self.started:
-            return prefix + 'Test #{}: {} started at {}'.format(self.pk, self.website.hostname, self.started)
+            return prefix + 'Test #{}: {} started at {}'.format(self.pk, self.url, self.started)
         else:
-            return prefix + 'Test #{}: {} requested at {}'.format(self.pk, self.website.hostname, self.requested)
+            return prefix + 'Test #{}: {} requested at {}'.format(self.pk, self.url, self.requested)
 
     def get_absolute_url(self):
         return reverse('measurement', args=(self.pk,))
+
+    @property
+    def hostname(self):
+        url_parts = urlparse(self.url, scheme='http')
+        return url_parts.netloc
 
     @property
     def v6only_score(self):
@@ -206,23 +206,16 @@ class Measurement(models.Model):
 
         return ok, error
 
-    def run_test(self):
-        url = 'http://{}/'.format(self.website.hostname)
-        if self.website.hash_param:
-            url += '#' + self.website.hash_param
-
+    def run_dns_tests(self):
         if self.finished:
-            logger.error("{}: test already finished".format(url))
+            logger.error("{}: test already finished".format(self.url))
             return
-
-        # Update started
-        self.started = timezone.now()
 
         # Get DNS info
         try:
-            a_records = subprocess.check_output(args=['dig', '+short', 'a', self.website.hostname],
+            a_records = subprocess.check_output(args=['dig', '+short', 'a', self.hostname],
                                                 stderr=subprocess.DEVNULL)
-            aaaa_records = subprocess.check_output(args=['dig', '+short', 'aaaa', self.website.hostname],
+            aaaa_records = subprocess.check_output(args=['dig', '+short', 'aaaa', self.hostname],
                                                    stderr=subprocess.DEVNULL)
             dns_records = a_records + aaaa_records
 
@@ -235,13 +228,20 @@ class Measurement(models.Model):
         except subprocess.CalledProcessError:
             self.dns_results = []
 
+        self.save()
+
+    def run_ping_tests(self):
+        if self.finished:
+            logger.error("{}: test already finished".format(self.url))
+            return
+
         # Ping
-        ping4_process = start_ping(['ping', '-c5', '-n', self.website.hostname])
-        ping4_1500_process = start_ping(['ping', '-c5', '-n', '-s1472', '-Mwant', self.website.hostname])
-        ping4_2000_process = start_ping(['ping', '-c5', '-n', '-s1972', '-Mwant', self.website.hostname])
-        ping6_process = start_ping(['ping6', '-c5', '-n', self.website.hostname])
-        ping6_1500_process = start_ping(['ping6', '-c5', '-n', '-s1452', '-Mwant', self.website.hostname])
-        ping6_2000_process = start_ping(['ping6', '-c5', '-n', '-s1952', '-Mwant', self.website.hostname])
+        ping4_process = start_ping(['ping', '-c5', '-n', self.hostname])
+        ping4_1500_process = start_ping(['ping', '-c5', '-n', '-s1472', '-Mwant', self.hostname])
+        ping4_2000_process = start_ping(['ping', '-c5', '-n', '-s1972', '-Mwant', self.hostname])
+        ping6_process = start_ping(['ping6', '-c5', '-n', self.hostname])
+        ping6_1500_process = start_ping(['ping6', '-c5', '-n', '-s1452', '-Mwant', self.hostname])
+        ping6_2000_process = start_ping(['ping6', '-c5', '-n', '-s1952', '-Mwant', self.hostname])
 
         self.ping4_latencies = parse_ping(ping4_process.communicate()[0])
         logger.info("Ping IPv4 results: {}".format(self.ping4_latencies))
@@ -261,6 +261,9 @@ class Measurement(models.Model):
         self.ping6_2000_latencies = parse_ping(ping6_2000_process.communicate()[0])
         logger.info("Ping IPv6 (2000) results: {}".format(self.ping6_2000_latencies))
 
+        self.save()
+
+    def run_browser_tests(self):
         # Common stuff
         script = os.path.realpath(os.path.join(
             os.path.dirname(__file__),
@@ -276,133 +279,123 @@ class Measurement(models.Model):
             # For now we create a new temp path for each run (see below)
         ]
 
-        with tempfile.TemporaryDirectory() as run_temp:
-            # Make a few subdirectories
-            v4only_temp = os.path.join(run_temp, 'v4only')
-            v6only_temp = os.path.join(run_temp, 'v6only')
-            nat64_temp = os.path.join(run_temp, 'nat64')
+        # Do the v4-only, v6-only and the NAT64 request in parallel
+        v4only_process = subprocess.Popen(
+            common_options
+            + ['--local-storage-path=/dev/null',
+               '--offline-storage-path=/dev/null',
+               '--proxy=' + settings.V4PROXY]
+            + [script, self.url],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            preexec_fn=ignore_signals,
+            cwd='/tmp'
+        )
+        logger.debug("Running {}".format(' '.join(v4only_process.args)))
 
-            os.makedirs(v4only_temp)
-            os.makedirs(v6only_temp)
-            os.makedirs(nat64_temp)
+        v6only_process = subprocess.Popen(
+            common_options
+            + ['--local-storage-path=/dev/null',
+               '--offline-storage-path=/dev/null',
+               '--proxy=' + settings.V6PROXY]
+            + [script, self.url],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            preexec_fn=ignore_signals,
+            cwd='/tmp'
+        )
+        logger.debug("Running {}".format(' '.join(v6only_process.args)))
 
-            # Do the v4-only, v6-only and the NAT64 request in parallel
-            v4only_process = subprocess.Popen(
-                common_options
-                + ['--local-storage-path=' + v4only_temp,
-                   '--offline-storage-path=' + v4only_temp,
-                   '--proxy=' + settings.V4PROXY]
-                + [script, url],
-                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                preexec_fn=ignore_signals,
-                cwd='/tmp'
-            )
-            logger.debug("Running {}".format(' '.join(v4only_process.args)))
+        nat64_process = subprocess.Popen(
+            common_options
+            + ['--local-storage-path=/dev/null',
+               '--offline-storage-path=/dev/null',
+               '--proxy=' + settings.NAT64PROXY]
+            + [script, self.url],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            preexec_fn=ignore_signals,
+            cwd='/tmp'
+        )
+        logger.debug("Running {}".format(' '.join(nat64_process.args)))
 
-            v6only_process = subprocess.Popen(
-                common_options
-                + ['--local-storage-path=' + v6only_temp,
-                   '--offline-storage-path=' + v6only_temp,
-                   '--proxy=' + settings.V6PROXY]
-                + [script, url],
-                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                preexec_fn=ignore_signals,
-                cwd='/tmp'
-            )
-            logger.debug("Running {}".format(' '.join(v6only_process.args)))
+        # Placeholders
+        v4only_img = None
+        v4only_img_bytes = None
+        v6only_img = None
+        v6only_img_bytes = None
+        nat64_img = None
+        nat64_img_bytes = None
 
-            nat64_process = subprocess.Popen(
-                common_options
-                + ['--local-storage-path=' + nat64_temp,
-                   '--offline-storage-path=' + nat64_temp,
-                   '--proxy=' + settings.NAT64PROXY]
-                + [script, url],
-                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                preexec_fn=ignore_signals,
-                cwd='/tmp'
-            )
-            logger.debug("Running {}".format(' '.join(nat64_process.args)))
+        self.v4only_data = {}
+        self.v6only_data = {}
+        self.nat64_data = {}
 
-            # Placeholders
-            v4only_img = None
-            v4only_img_bytes = None
-            v6only_img = None
-            v6only_img_bytes = None
-            nat64_img = None
-            nat64_img_bytes = None
+        # Wait for tests to finish
+        start_time = time.time()
+        full_timeout = 30
+        timeout = full_timeout
+        try:
+            v4only_json, v4only_debug = v4only_process.communicate(timeout=timeout)
+            self.v4only_data = json.loads(
+                v4only_json.decode('utf-8'),
+                object_pairs_hook=OrderedDict
+            ) if v4only_json else {}
+            self.v4only_debug = v4only_debug.decode('utf-8')
+            if 'image' in self.v4only_data:
+                if self.v4only_data['image']:
+                    v4only_img_bytes = base64.decodebytes(self.v4only_data['image'].encode('ascii'))
+                    # noinspection PyTypeChecker
+                    v4only_img = skimage.io.imread(io.BytesIO(v4only_img_bytes))
+                del self.v4only_data['image']
 
-            self.v4only_data = {}
-            self.v6only_data = {}
-            self.nat64_data = {}
+        except subprocess.TimeoutExpired:
+            logger.error("{}: IPv4-only load timed out".format(self.url))
+            v4only_process.kill()
 
-            # Wait for tests to finish
-            start_time = time.time()
-            full_timeout = 30
-            timeout = full_timeout
-            try:
-                v4only_json, v4only_debug = v4only_process.communicate(timeout=timeout)
-                self.v4only_data = json.loads(
-                    v4only_json.decode('utf-8'),
-                    object_pairs_hook=OrderedDict
-                ) if v4only_json else {}
-                self.v4only_debug = v4only_debug.decode('utf-8')
-                if 'image' in self.v4only_data:
-                    if self.v4only_data['image']:
-                        v4only_img_bytes = base64.decodebytes(self.v4only_data['image'].encode('ascii'))
-                        # noinspection PyTypeChecker
-                        v4only_img = skimage.io.imread(io.BytesIO(v4only_img_bytes))
-                    del self.v4only_data['image']
+        timeout = full_timeout - (time.time() - start_time)
+        try:
+            v6only_json, v6only_debug = v6only_process.communicate(timeout=timeout)
+            self.v6only_data = json.loads(
+                v6only_json.decode('utf-8'),
+                object_pairs_hook=OrderedDict
+            ) if v6only_json else {}
+            self.v6only_debug = v6only_debug.decode('utf-8')
+            if 'image' in self.v6only_data:
+                if self.v6only_data['image']:
+                    v6only_img_bytes = base64.decodebytes(self.v6only_data['image'].encode('ascii'))
+                    # noinspection PyTypeChecker
+                    v6only_img = skimage.io.imread(io.BytesIO(v6only_img_bytes))
+                del self.v6only_data['image']
+        except subprocess.TimeoutExpired:
+            logger.error("{}: IPv6-only load timed out".format(self.url))
+            v6only_process.kill()
 
-            except subprocess.TimeoutExpired:
-                logger.error("{}: IPv4-only load timed out".format(url))
-                v4only_process.kill()
-
-            timeout = full_timeout - (time.time() - start_time)
-            try:
-                v6only_json, v6only_debug = v6only_process.communicate(timeout=timeout)
-                self.v6only_data = json.loads(
-                    v6only_json.decode('utf-8'),
-                    object_pairs_hook=OrderedDict
-                ) if v6only_json else {}
-                self.v6only_debug = v6only_debug.decode('utf-8')
-                if 'image' in self.v6only_data:
-                    if self.v6only_data['image']:
-                        v6only_img_bytes = base64.decodebytes(self.v6only_data['image'].encode('ascii'))
-                        # noinspection PyTypeChecker
-                        v6only_img = skimage.io.imread(io.BytesIO(v6only_img_bytes))
-                    del self.v6only_data['image']
-            except subprocess.TimeoutExpired:
-                logger.error("{}: IPv6-only load timed out".format(url))
-                v6only_process.kill()
-
-            timeout = full_timeout - (time.time() - start_time)
-            try:
-                nat64_json, nat64_debug = nat64_process.communicate(timeout=timeout)
-                self.nat64_data = json.loads(
-                    nat64_json.decode('utf-8'),
-                    object_pairs_hook=OrderedDict
-                ) if nat64_json else {}
-                self.nat64_debug = nat64_debug.decode('utf-8')
-                if 'image' in self.nat64_data:
-                    if self.nat64_data['image']:
-                        nat64_img_bytes = base64.decodebytes(self.nat64_data['image'].encode('ascii'))
-                        # noinspection PyTypeChecker
-                        nat64_img = skimage.io.imread(io.BytesIO(nat64_img_bytes))
-                    del self.nat64_data['image']
-            except subprocess.TimeoutExpired:
-                logger.error("{}: NAT64 load timed out".format(url))
-                nat64_process.kill()
+        timeout = full_timeout - (time.time() - start_time)
+        try:
+            nat64_json, nat64_debug = nat64_process.communicate(timeout=timeout)
+            self.nat64_data = json.loads(
+                nat64_json.decode('utf-8'),
+                object_pairs_hook=OrderedDict
+            ) if nat64_json else {}
+            self.nat64_debug = nat64_debug.decode('utf-8')
+            if 'image' in self.nat64_data:
+                if self.nat64_data['image']:
+                    nat64_img_bytes = base64.decodebytes(self.nat64_data['image'].encode('ascii'))
+                    # noinspection PyTypeChecker
+                    nat64_img = skimage.io.imread(io.BytesIO(nat64_img_bytes))
+                del self.nat64_data['image']
+        except subprocess.TimeoutExpired:
+            logger.error("{}: NAT64 load timed out".format(self.url))
+            nat64_process.kill()
 
         # Calculate score based on resources
         v4only_resources_ok = self.v4only_resources[0]
         if v4only_resources_ok > 0:
             self.v6only_resource_score = min(self.v6only_resources[0] / v4only_resources_ok, 1)
-            logger.info("{}: IPv6-only Resource Score = {:0.2f}".format(url, self.v6only_resource_score))
+            logger.info("{}: IPv6-only Resource Score = {:0.2f}".format(self.url, self.v6only_resource_score))
 
             self.nat64_resource_score = min(self.nat64_resources[0] / v4only_resources_ok, 1)
-            logger.info("{}: NAT64 Resource Score = {:0.2f}".format(url, self.nat64_resource_score))
+            logger.info("{}: NAT64 Resource Score = {:0.2f}".format(self.url, self.nat64_resource_score))
         else:
-            logger.error("{}: did not load over IPv4-only, unable to perform resource test".format(url))
+            logger.error("{}: did not load over IPv4-only, unable to perform resource test".format(self.url))
 
         return_value = 0
         if v4only_img_bytes:
@@ -424,32 +417,49 @@ class Measurement(models.Model):
             return_value |= 4
 
         if v4only_img is not None:
-            logger.debug("{}: Loading IPv4-only screenshot".format(url))
+            logger.debug("{}: Loading IPv4-only screenshot".format(self.url))
 
             if v6only_img is not None:
-                logger.debug("{}: Loading IPv6-only screenshot".format(url))
+                logger.debug("{}: Loading IPv6-only screenshot".format(self.url))
 
                 # Suppress stupid warnings
                 with warnings.catch_warnings(record=True):
                     self.v6only_image_score = compare_ssim(v4only_img, v6only_img, multichannel=True)
-                    logger.info("{}: IPv6-only Image Score = {:0.2f}".format(url, self.v6only_image_score))
+                    logger.info("{}: IPv6-only Image Score = {:0.2f}".format(self.url, self.v6only_image_score))
             else:
-                logger.warning("{}: did not load over IPv6-only, 0 score".format(url))
+                logger.warning("{}: did not load over IPv6-only, 0 score".format(self.url))
                 self.v6only_image_score = 0.0
 
             if nat64_img is not None:
-                logger.debug("{}: Loading NAT64 screenshot".format(url))
+                logger.debug("{}: Loading NAT64 screenshot".format(self.url))
 
                 # Suppress stupid warnings
                 with warnings.catch_warnings(record=True):
                     self.nat64_image_score = compare_ssim(v4only_img, nat64_img, multichannel=True)
-                    logger.info("{}: NAT64 Image Score = {:0.2f}".format(url, self.nat64_image_score))
+                    logger.info("{}: NAT64 Image Score = {:0.2f}".format(self.url, self.nat64_image_score))
             else:
-                logger.warning("{}: did not load over NAT64, 0 score".format(url))
+                logger.warning("{}: did not load over NAT64, 0 score".format(self.url))
                 self.nat64_image_score = 0.0
 
         else:
-            logger.error("{}: did not load over IPv4-only, unable to perform image test".format(url))
+            logger.error("{}: did not load over IPv4-only, unable to perform image test".format(self.url))
+
+        self.save()
+
+        return return_value
+
+    def run_test(self):
+        if self.finished:
+            logger.error("{}: test already finished".format(self.url))
+            return
+
+        # Update started
+        self.started = timezone.now()
+
+        # Run tests
+        self.run_dns_tests()
+        self.run_ping_tests()
+        return_value = self.run_browser_tests()
 
         self.finished = timezone.now()
         self.save()

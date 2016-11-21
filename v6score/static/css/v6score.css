@@ -1,25 +1,61 @@
 body {
-    font-family: "Helvetica Neue", "Helvetica", Arial, sans-serif;
-    font-size: 16px;
-    padding: 0;
+    font-family: Helvetica Neue, Helvetica, Arial, sans-serif;
+    font-size: 14px;
+}
+
+* {
     margin: 0;
+    padding: 0;
+}
+
+@font-face {
+    font-family: 'FontAwesome';
+    src: url('../fonts/fontawesome-webfont.eot?v=4.7.0');
+    src: url('../fonts/fontawesome-webfont.eot?#iefix&v=4.7.0') format('embedded-opentype'),
+    url('../fonts/fontawesome-webfont.woff2?v=4.7.0') format('woff2'),
+    url('../fonts/fontawesome-webfont.woff?v=4.7.0') format('woff'),
+    url('../fonts/fontawesome-webfont.ttf?v=4.7.0') format('truetype'),
+    url('../fonts/fontawesome-webfont.svg?v=4.7.0#fontawesomeregular') format('svg');
+    font-weight: normal;
+    font-style: normal;
+}
+
+.fa {
+    display: inline-block;
+    font: normal normal normal 14px/1 FontAwesome;
+    font-size: inherit;
+    text-rendering: auto;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.fa-check:before {
+    content: "\f00c";
+}
+
+.fa-search:before {
+    content: "\f002";
 }
 
 h1 {
-    background: #eeeeee;
-    font-size: 24pt;
-    font-weight: bold;
-    padding: 0.3em 15px;
-    margin: -15px -15px 10px -15px;
-}
-
-form.search-box {
+    font-family: "OCR A Std", ocr-a-std, "CourierNew", Courier, monospace;
+    font-size: 5em;
     text-align: center;
     margin-top: 70px;
 }
 
+h1 span {
+    color: #26AA4F;
+}
+
+form.search-box {
+    text-align: center;
+}
+
 div.centre-search-box {
-    margin-top: 50px;
+    padding-left: 20px;
+    overflow: hidden;
+    margin: 50px 0;
     width: 600px;
     text-align: left;
     position: relative;
@@ -27,22 +63,19 @@ div.centre-search-box {
     border: 1px solid #ccc;
     border-radius: 30px;
     box-shadow: 2px 2px 4px #666;
-}
-
-div.search-box-input {
-    width: 460px;
-    margin: 20px 30px;
     font-size: 25px;
 }
 
-div.search-box-input input {
+div.centre-search-box input {
+    margin: 20px 30px 20px 10px;
     border: 0;
-    width: 370px;
+    width: 400px;
     font-size: 25px;
 }
 
 div.search-box-submit {
     position: absolute;
+    font-size: 14px;
     right: -2px;
     top: -1px;
     bottom: -1px;
@@ -57,12 +90,15 @@ div.search-box-submit button {
     border: 0;
     background: none;
     margin: 0;
-    padding: 0;
     cursor: pointer;
+    font-size: 3em;
+    line-height: 65px;
+    color: #fff;
+    padding: 0 0 0 12px;
 }
 
-div.search-box-submit button img {
-    margin: 16px 10px;
+div.search-box-submit button:active {
+    padding: 2px 0 0 14px;
 }
 
 table {
@@ -111,4 +147,120 @@ ul.messages li.warning {
 
 ul.messages li.error {
     background: #ffefef;
+}
+
+ul.errorlist {
+    text-align: center;
+    background: #ffefef;
+}
+
+.results {
+    background-color: #BCB4B4;
+    color: #fff;
+    padding: 20px;
+    box-shadow: inset -1px 4px 20px -6px #000;
+}
+
+.filter-results {
+    border-radius: 30px;
+    border: none;
+    background-color: #878787;
+    color: #fff;
+    padding: 10px;
+    font-size: 1em;
+    min-width: 70px;
+    opacity: 0.3;
+    margin: 0 10px 0 10px;
+    cursor: pointer;
+}
+
+.filter-results.selected {
+    opacity: 1;
+}
+
+.filter-results:hover {
+    opacity: 1;
+}
+
+.poor {
+    background-color: #D10003;
+}
+
+.good {
+    background-color: #E1D400;
+}
+
+.perfect {
+    background-color: #26AA4F;
+}
+
+input.results-search {
+    display: inline-block;
+    width: 20%;
+    border: 1px solid #B0ADAD;
+    border-radius: 30px;
+    font-size: 1em;
+    color: #000000;
+    line-height: 20px;
+    padding: 10px 20px;
+}
+
+button.submit-results-search {
+    width: 50px;
+    border: 1px solid #747474;
+    border-radius: 0 30px 30px 0;
+    margin-left: -50px;
+    margin-right: 10px;
+    background-color: #747474;
+    font-size: 1em;
+    line-height: 20px;
+    color: #fff;
+    padding: 10px 0;
+    cursor: pointer;
+}
+
+input.submit-results-search:hover {
+    background-color: #26AA4F;
+}
+
+.results-main, .detail-main {
+    background-color: #E0DCDC;
+}
+
+.results-nav .nav {
+    display: inline-block;
+    background-color: rgba(255, 255, 255, 0.5);
+}
+
+.results-table {
+    width: 100%;
+}
+
+.results-table tr {
+    background-color: #ECEAEA;
+}
+
+.results-table tr:nth-child(2n+1) {
+    background-color: white;
+}
+
+.results-table th {
+    padding: 20px;
+    margin: 0;
+    background-color: #F6F6F6;
+    font-weight: bold;
+}
+
+.results-table td {
+    padding: 10px 20px;
+    margin: 0;
+}
+
+.footer {
+    background-color: #AFA8A8;
+    width: 100%;
+    text-align: center;
+    color: #fff;
+    margin: 0;
+    padding: 20px 0;
 }

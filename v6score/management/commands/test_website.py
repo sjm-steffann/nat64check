@@ -3,8 +3,9 @@ import logging
 from django.core.management.base import LabelCommand
 from django.utils import timezone
 
+from v6score.forms import URLForm
 from v6score.management.commands import init_logging
-from v6score.models import Website, Measurement
+from v6score.models import Measurement
 
 logger = logging.getLogger()
 
@@ -19,10 +20,15 @@ class Command(LabelCommand):
         super(Command, self).handle(*labels, **options)
 
     def handle_label(self, label, **options):
-        # First find or create the website
-        website = Website.objects.get_or_create(hostname=label.strip())[0]
+        url_form = URLForm({
+            'url': label
+        })
+        if not url_form.is_valid():
+            logger.critical("Invalid URL: {}".format(label))
+            return
 
-        # Build the test results
-        results = Measurement(website=website, requested=timezone.now(), manual=True)
+        # Get the cleaned URL from the form
+        url = url_form.cleaned_data['url']
 
+        results = Measurement(url=url, requested=timezone.now(), manual=True)
         results.run_test()

@@ -1,7 +1,13 @@
+{% load static %}
+
+{% if not measurement.finished %}
+    <img src="{% static 'img/loading.gif' %}">
+{% endif %}
+
 <table>
     <tr>
-        <th>Website:</th>
-        <td>{{ measurement.website.hostname }}</td>
+        <th>URL:</th>
+        <td>{{ measurement.url }}</td>
     </tr>
     <tr>
         <th>Test requested:</th>
@@ -9,12 +15,74 @@
     </tr>
     <tr>
         <th>Test started:</th>
-        <td>{{ measurement.started }}</td>
+        <td>{{ measurement.started|default:'waiting for test to start' }}</td>
     </tr>
-    <tr>
-        <th>Test finished:</th>
-        <td>{{ measurement.finished }}</td>
-    </tr>
+    {% if measurement.started %}
+        <tr>
+            <th>Test finished:</th>
+            <td>{{ measurement.finished|default:'waiting for test to finish' }}</td>
+        </tr>
+    {% endif %}
+
+    {% if measurement.dns_results or measurement.finished %}
+        <tr>
+            <th>&nbsp;</th>
+            <td></td>
+        </tr>
+        <tr>
+            <th>DNS records</th>
+            <td>
+                {% for address in measurement.dns_results %}
+                    {{ address }}<br>
+                {% empty %}
+                    Unknown
+                {% endfor %}
+            </td>
+        </tr>
+    {% endif %}
+
+    {% if measurement.ping4_latencies or measurement.finished %}
+        <tr>
+            <th>&nbsp;</th>
+            <td></td>
+        </tr>
+        <tr>
+            <th>IPv4 pings</th>
+            <td>
+                {% include 'v6score/latency_data.html' with latencies=measurement.ping4_latencies %}
+            </td>
+        </tr>
+        <tr>
+            <th>IPv4 pings (1500 byte packets)</th>
+            <td>
+                {% include 'v6score/latency_data.html' with latencies=measurement.ping4_1500_latencies %}
+            </td>
+        </tr>
+        <tr>
+            <th>IPv4 pings (2000 byte "packets")</th>
+            <td>
+                {% include 'v6score/latency_data.html' with latencies=measurement.ping4_2000_latencies %}
+            </td>
+        </tr>
+        <tr>
+            <th>IPv6 pings</th>
+            <td>
+                {% include 'v6score/latency_data.html' with latencies=measurement.ping6_latencies %}
+            </td>
+        </tr>
+        <tr>
+            <th>IPv6 pings (1500 byte packets)</th>
+            <td>
+                {% include 'v6score/latency_data.html' with latencies=measurement.ping6_1500_latencies %}
+            </td>
+        </tr>
+        <tr>
+            <th>IPv6 pings (2000 byte "packets")</th>
+            <td>
+                {% include 'v6score/latency_data.html' with latencies=measurement.ping6_2000_latencies %}
+            </td>
+        </tr>
+    {% endif %}
 
     {% if measurement.finished %}
         <tr>
@@ -72,52 +140,6 @@
                     <td class="perfect-score">{% widthratio measurement.nat64_resource_score 1 100 %}%</td>
                 {% endif %}
             </tr>
-            <tr>
-                <th>DNS records</th>
-                <td>
-                    {% for address in measurement.dns_results %}
-                        {{ address }}<br>
-                    {% empty %}
-                        Unknown
-                    {% endfor %}
-                </td>
-            </tr>
-            <tr>
-                <th>IPv4 pings</th>
-                <td>
-                    {% include 'v6score/latency_data.html' with latencies=measurement.ping4_latencies %}
-                </td>
-            </tr>
-            <tr>
-                <th>IPv4 pings (1500 byte packets)</th>
-                <td>
-                    {% include 'v6score/latency_data.html' with latencies=measurement.ping4_1500_latencies %}
-                </td>
-            </tr>
-            <tr>
-                <th>IPv4 pings (2000 byte "packets")</th>
-                <td>
-                    {% include 'v6score/latency_data.html' with latencies=measurement.ping4_2000_latencies %}
-                </td>
-            </tr>
-            <tr>
-                <th>IPv6 pings</th>
-                <td>
-                    {% include 'v6score/latency_data.html' with latencies=measurement.ping6_latencies %}
-                </td>
-            </tr>
-            <tr>
-                <th>IPv6 pings (1500 byte packets)</th>
-                <td>
-                    {% include 'v6score/latency_data.html' with latencies=measurement.ping6_1500_latencies %}
-                </td>
-            </tr>
-            <tr>
-                <th>IPv6 pings (2000 byte "packets")</th>
-                <td>
-                    {% include 'v6score/latency_data.html' with latencies=measurement.ping6_2000_latencies %}
-                </td>
-            </tr>
         {% else %}
             <tr>
                 <th>No score:</th>
@@ -165,9 +187,9 @@
 
     <br>
 
-    <form method="post" action="{% url 'request' %}">
+    <form method="post" action="{% url 'overview' %}">
         {% csrf_token %}
-        <input type="hidden" name="hostname" value="{{ hostname }}">
+        <input type="hidden" name="url" value="{{ url }}">
         <input type="hidden" name="force_new" value="1">
 
         Not happy? Fix your website and

@@ -34,7 +34,7 @@ class Migration(migrations.Migration):
             name='Website',
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('hostname', models.CharField(max_length=128, unique=True, validators=[v6score.models.validate_hostname])),
+                ('hostname', models.CharField(max_length=128, unique=True)),
                 ('hash_param', models.CharField(blank=True, max_length=128)),
             ],
         ),

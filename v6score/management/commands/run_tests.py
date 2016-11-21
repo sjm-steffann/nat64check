@@ -39,6 +39,7 @@ class Command(BaseCommand):
 
         stopping = []
 
+        # noinspection PyUnusedLocal
         def stop_me(sig_num, stack):
             logger.critical("Interrupt received, please wait while we finish the current test")
             stopping.append(True)
@@ -92,8 +93,7 @@ class Command(BaseCommand):
                     requested = timezone.now() + delta
 
                     logging.warning("Dubious result, re-scheduling test")
-                    new_measurement = Measurement(website=measurement.website, requested=requested,
-                                                  retry_for=measurement)
+                    new_measurement = Measurement(url=measurement.url, requested=requested, retry_for=measurement)
                     new_measurement.save()
 
             else:

@@ -2,19 +2,102 @@
 {% load static %}
 
 {% block content %}
-    <form method="post" action="{% url 'request' %}" class="search-box">
-        <img alt="nat64check" src="{% static 'img/nat64check-logo.png' %}"><br>
+    <h1>nat64<span>check</span></h1>
+
+    <form method="post" class="search-box">
         <div class="centre-search-box">
-            <div class="search-box-input">
-                http://<input title="website" name="hostname" placeholder="www.example.com" value="{{ hostname }}">
-            </div>
+            Run test: {{ url_form.url }}
+            {{ url_form.url.errors }}
             <div class="search-box-submit">
-                <button><img alt="Search"
-                             title="Search"
-                             src="{% static 'img/checkmark.png' %}">
-                </button>
+                <button><span class="fa fa-check"></span></button>
             </div>
         </div>
         {% csrf_token %}
     </form>
+
+    <div class="results">
+        <div class="search">
+            <form id="form2">
+                <input name="search" value="{{ search }}" autofocus placeholder="Search" class="results-search">
+                <button type="submit" class="submit-results-search"><span class="fa fa-search"></span></button>
+
+                <input type="hidden" name="test" value="{{ test }}">
+                <input type="hidden" name="score" value="{{ score }}">
+
+                {% if nat64_selected %}
+                    <button name="test" value="" class="filter-results nat64 selected">NAT64</button>
+                {% else %}
+                    <button name="test" value="nat64" class="filter-results nat64">NAT64</button>
+                {% endif %}
+
+                {% if ipv6_selected %}
+                    <button name="test" value="" class="filter-results ipv6 selected">IPv6</button>
+                {% else %}
+                    <button name="test" value="ipv6" class="filter-results ipv6">IPv6</button>
+                {% endif %}
+
+                {% if poor_selected %}
+                    <button name="score" value="" class="filter-results poor selected">Poor</button>
+                {% else %}
+                    <button name="score" value="poor" class="filter-results poor">Poor</button>
+                {% endif %}
+
+                {% if good_selected %}
+                    <button name="score" value="" class="filter-results good selected">Good</button>
+                {% else %}
+                    <button name="score" value="good" class="filter-results good">Good</button>
+                {% endif %}
+
+                {% if perfect_selected %}
+                    <button name="score" value="" class="filter-results perfect selected">Perfect</button>
+                {% else %}
+                    <button name="score" value="perfect" class="filter-results perfect">Perfect</button>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+
+    <div class="results-main">
+        <table class="results-table">
+            <tr>
+                <th>URL</th>
+                <th>When</th>
+                <th>NAT64</th>
+                <th>IPv6</th>
+            </tr>
+            {% for measurement in measurements %}
+                <tr>
+                    <td>
+                        <a href="{% url 'measurement' measurement.pk %}">{{ measurement.url }}</a>
+                    </td>
+
+                    <td>{{ measurement.finished }}</td>
+
+                    {% if measurement.nat64_score == 0 %}
+                        <td class="no-score">Unreachable</td>
+                    {% elif measurement.nat64_score < 0.8 %}
+                        <td class="bad-score">{% widthratio measurement.nat64_score 1 100 %}%</td>
+                    {% elif measurement.nat64_score < 0.95 %}
+                        <td class="good-score">{% widthratio measurement.nat64_score 1 100 %}%</td>
+                    {% else %}
+                        <td class="perfect-score">{% widthratio measurement.nat64_score 1 100 %}%</td>
+                    {% endif %}
+
+                    {% if measurement.v6only_score == 0 %}
+                        <td class="no-score">Unreachable</td>
+                    {% elif measurement.v6only_score < 0.8 %}
+                        <td class="bad-score">{% widthratio measurement.v6only_score 1 100 %}%</td>
+                    {% elif measurement.v6only_score < 0.95 %}
+                        <td class="good-score">{% widthratio measurement.v6only_score 1 100 %}%</td>
+                    {% else %}
+                        <td class="perfect-score">{% widthratio measurement.v6only_score 1 100 %}%</td>
+                    {% endif %}
+                </tr>
+            {% endfor %}
+        </table>
+    </div>
+
+    <div class="footer">
+        Developed by Sander Steffann and Jan Žorž
+    </div>
 {% endblock %}

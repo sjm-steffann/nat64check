@@ -1,6 +1,5 @@
 import yaml
 from django.contrib import admin
-from django.db.models.aggregates import Avg, Count, Max, Min
 from django.utils import timezone
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
@@ -8,8 +7,8 @@ from pygments import highlight
 from pygments.formatters.html import HtmlFormatter
 from pygments.lexers.data import YamlLexer
 
-from v6score.filter import LastTestFilter, RetryFilter, StateFilter, score_filter
-from v6score.models import Measurement, Website
+from v6score.filter import RetryFilter, StateFilter, score_filter
+from v6score.models import Measurement
 
 
 def show_score(score):
@@ -48,71 +47,9 @@ class InlineMeasurement(admin.TabularInline):
     admin_nat64_image_score.short_description = 'nat64 score'
 
 
-@admin.register(Website)
-class WebsiteAdmin(admin.ModelAdmin):
-    list_display = ('hostname', 'hash_param',
-                    'measurement_count',
-                    'last_test',
-                    'min_v6only_image_score', 'avg_v6only_image_score', 'max_v6only_image_score',
-                    'min_nat64_image_score', 'avg_nat64_image_score', 'max_nat64_image_score')
-    list_filter = (LastTestFilter,)
-    inlines = [InlineMeasurement]
-
-    def get_queryset(self, request):
-        qs = super().get_queryset(request)
-        return qs.annotate(measurement_count=Count('measurement'),
-                           last_test=Max('measurement__finished'),
-                           min_v6only_image_score=Min('measurement__v6only_image_score'),
-                           avg_v6only_image_score=Avg('measurement__v6only_image_score'),
-                           max_v6only_image_score=Max('measurement__v6only_image_score'),
-                           min_nat64_image_score=Min('measurement__nat64_image_score'),
-                           avg_nat64_image_score=Avg('measurement__nat64_image_score'),
-                           max_nat64_image_score=Max('measurement__nat64_image_score'))
-
-    def measurement_count(self, obj):
-        return obj.measurement_count
-
-    measurement_count.admin_order_field = 'measurement_count'
-
-    def last_test(self, obj):
-        return obj.last_test
-
-    last_test.admin_order_field = 'last_test'
-
-    def min_v6only_image_score(self, obj):
-        return show_score(obj.min_v6only_image_score)
-
-    min_v6only_image_score.admin_order_field = 'min_v6only_image_score'
-
-    def avg_v6only_image_score(self, obj):
-        return show_score(obj.avg_v6only_image_score)
-
-    avg_v6only_image_score.admin_order_field = 'avg_v6only_image_score'
-
-    def max_v6only_image_score(self, obj):
-        return show_score(obj.max_v6only_image_score)
-
-    max_v6only_image_score.admin_order_field = 'max_v6only_image_score'
-
-    def min_nat64_image_score(self, obj):
-        return show_score(obj.min_nat64_image_score)
-
-    min_nat64_image_score.admin_order_field = 'min_nat64_image_score'
-
-    def avg_nat64_image_score(self, obj):
-        return show_score(obj.avg_nat64_image_score)
-
-    avg_nat64_image_score.admin_order_field = 'avg_nat64_image_score'
-
-    def max_nat64_image_score(self, obj):
-        return show_score(obj.max_nat64_image_score)
-
-    max_nat64_image_score.admin_order_field = 'max_nat64_image_score'
-
-
 @admin.register(Measurement)
 class MeasurementAdmin(admin.ModelAdmin):
-    list_display = ('website', 'manual', 'admin_is_retry',
+    list_display = ('url', 'manual', 'admin_is_retry',
                     'requested', 'started', 'finished',
                     'admin_v6only_image_score', 'admin_nat64_image_score',
                     'admin_v6only_resource_score', 'admin_nat64_resource_score')
@@ -131,11 +68,11 @@ class MeasurementAdmin(admin.ModelAdmin):
                        'admin_v6only_data', 'v6only_data', 'v6only_debug',
                        'admin_nat64_data', 'nat64_data', 'nat64_debug')
     actions = ('mark_pending_as_manual', 'reschedule_test',)
-    search_fields = ('website__hostname',)
+    search_fields = ('url',)
 
     fieldsets = [
         ('Test', {
-            'fields': ('website', 'manual', 'requested', 'started', 'finished')
+            'fields': ('url', 'manual', 'requested', 'started', 'finished')
         }),
         ('Results', {
             'fields': (('v6only_image_score', 'nat64_image_score'),
@@ -172,7 +109,7 @@ class MeasurementAdmin(admin.ModelAdmin):
     def reschedule_test(self, request, queryset):
         count = 0
         for measurement in queryset:
-            new_measurement = Measurement(website=measurement.website,
+            new_measurement = Measurement(url=measurement.url,
                                           requested=timezone.now(),
                                           retry_for=measurement)
             new_measurement.save()
