@@ -97,9 +97,9 @@
                 {% elif measurement.v6only_image_score < 0.8 %}
                     <td class="bad-score">{% widthratio measurement.v6only_image_score 1 100 %}%</td>
                 {% elif measurement.v6only_score < 0.95 %}
-                    <td class="good-score">{% widthratio measurement.v6only_image_score 1 100 %}%</td>
+                    <td class="mediocre-score">{% widthratio measurement.v6only_image_score 1 100 %}%</td>
                 {% else %}
-                    <td class="perfect-score">{% widthratio measurement.v6only_image_score 1 100 %}%</td>
+                    <td class="good-score">{% widthratio measurement.v6only_image_score 1 100 %}%</td>
                 {% endif %}
             </tr>
             <tr>
@@ -109,9 +109,9 @@
                 {% elif measurement.v6only_resource_score < 0.8 %}
                     <td class="bad-score">{% widthratio measurement.v6only_resource_score 1 100 %}%</td>
                 {% elif measurement.v6only_score < 0.95 %}
-                    <td class="good-score">{% widthratio measurement.v6only_resource_score 1 100 %}%</td>
+                    <td class="mediocre-score">{% widthratio measurement.v6only_resource_score 1 100 %}%</td>
                 {% else %}
-                    <td class="perfect-score">{% widthratio measurement.v6only_resource_score 1 100 %}%</td>
+                    <td class="good-score">{% widthratio measurement.v6only_resource_score 1 100 %}%</td>
                 {% endif %}
             </tr>
             <tr>
@@ -122,9 +122,9 @@
                 {% elif measurement.nat64_image_score < 0.8 %}
                     <td class="bad-score">{% widthratio measurement.nat64_image_score 1 100 %}%</td>
                 {% elif measurement.nat64_score < 0.95 %}
-                    <td class="good-score">{% widthratio measurement.nat64_image_score 1 100 %}%</td>
+                    <td class="mediocre-score">{% widthratio measurement.nat64_image_score 1 100 %}%</td>
                 {% else %}
-                    <td class="perfect-score">{% widthratio measurement.nat64_image_score 1 100 %}%</td>
+                    <td class="good-score">{% widthratio measurement.nat64_image_score 1 100 %}%</td>
                 {% endif %}
             </tr>
             <tr>
@@ -135,9 +135,9 @@
                 {% elif measurement.nat64_resource_score < 0.8 %}
                     <td class="bad-score">{% widthratio measurement.nat64_resource_score 1 100 %}%</td>
                 {% elif measurement.nat64_score < 0.95 %}
-                    <td class="good-score">{% widthratio measurement.nat64_resource_score 1 100 %}%</td>
+                    <td class="mediocre-score">{% widthratio measurement.nat64_resource_score 1 100 %}%</td>
                 {% else %}
-                    <td class="perfect-score">{% widthratio measurement.nat64_resource_score 1 100 %}%</td>
+                    <td class="good-score">{% widthratio measurement.nat64_resource_score 1 100 %}%</td>
                 {% endif %}
             </tr>
         {% else %}

@@ -111,20 +111,17 @@ th, td {
     padding: 1px 1cm 1px 1px;
 }
 
-.no-score {
-    color: red;
+.no-score,
+.bad-score {
+    color: #D10003;
 }
 
-.bad-score {
-    color: orange;
+.mediocre-score {
+    color: #bfaf00;
 }
 
 .good-score {
-    color: blue;
-}
-
-.perfect-score {
-    color: green;
+    color: #26AA4F;
 }
 
 ul.messages {
@@ -186,11 +183,11 @@ ul.errorlist {
     background-color: #D10003;
 }
 
-.good {
+.mediocre {
     background-color: #E1D400;
 }
 
-.perfect {
+.good {
     background-color: #26AA4F;
 }
 

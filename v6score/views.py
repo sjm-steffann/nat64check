@@ -25,8 +25,8 @@ def show_overview(request):
     nat64_selected = (test_filter == 'nat64')
     ipv6_selected = (test_filter == 'ipv6')
     poor_selected = (score_filter == 'poor')
+    mediocre_selected = (score_filter == 'mediocre')
     good_selected = (score_filter == 'good')
-    perfect_selected = (score_filter == 'perfect')
 
     measurements = (Measurement.objects.all()
                     .exclude(finished=None)
@@ -39,30 +39,30 @@ def show_overview(request):
     if nat64_selected:
         if poor_selected:
             measurements = measurements.filter(nat64_image_score__lt=0.8)
-        elif good_selected:
+        elif mediocre_selected:
             measurements = measurements.filter(nat64_image_score__gte=0.8, nat64_image_score__lt=0.95)
-        elif perfect_selected:
+        elif good_selected:
             measurements = measurements.filter(nat64_image_score__gte=0.95)
         else:
             measurements = measurements.exclude(nat64_image_score=None)
     elif ipv6_selected:
         if poor_selected:
             measurements = measurements.filter(v6only_image_score__lt=0.8)
-        elif good_selected:
+        elif mediocre_selected:
             measurements = measurements.filter(v6only_image_score__gte=0.8, v6only_image_score__lt=0.95)
-        elif perfect_selected:
+        elif good_selected:
             measurements = measurements.filter(v6only_image_score__gte=0.95)
         else:
             measurements = measurements.exclude(v6only_image_score=None)
     else:
         if poor_selected:
             measurements = measurements.filter(Q(nat64_image_score__lt=0.8) | Q(v6only_image_score__lt=0.8))
-        elif good_selected:
+        elif mediocre_selected:
             measurements = measurements.filter(Q(nat64_image_score__gte=0.8, nat64_image_score__lt=0.95,
                                                  v6only_image_score__gte=0.8) |
                                                Q(v6only_image_score__gte=0.8, v6only_image_score__lt=0.95,
                                                  nat64_image_score__gte=0.8))
-        elif perfect_selected:
+        elif good_selected:
             measurements = measurements.filter(nat64_image_score__gte=0.95, v6only_image_score__gte=0.95)
 
     return render(request, 'v6score/overview.html', {
@@ -75,8 +75,8 @@ def show_overview(request):
         'nat64_selected': nat64_selected,
         'ipv6_selected': ipv6_selected,
         'poor_selected': poor_selected,
+        'mediocre_selected': mediocre_selected,
         'good_selected': good_selected,
-        'perfect_selected': perfect_selected,
 
         'measurements': measurements[:50],
     })

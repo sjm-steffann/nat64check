@@ -42,16 +42,16 @@
                     <button name="score" value="poor" class="filter-results poor">Poor</button>
                 {% endif %}
 
+                {% if mediocre_selected %}
+                    <button name="score" value="" class="filter-results mediocre selected">Mediocre</button>
+                {% else %}
+                    <button name="score" value="mediocre" class="filter-results mediocre">Mediocre</button>
+                {% endif %}
+
                 {% if good_selected %}
                     <button name="score" value="" class="filter-results good selected">Good</button>
                 {% else %}
                     <button name="score" value="good" class="filter-results good">Good</button>
-                {% endif %}
-
-                {% if perfect_selected %}
-                    <button name="score" value="" class="filter-results perfect selected">Perfect</button>
-                {% else %}
-                    <button name="score" value="perfect" class="filter-results perfect">Perfect</button>
                 {% endif %}
             </form>
         </div>
@@ -78,9 +78,9 @@
                     {% elif measurement.nat64_image_score < 0.8 %}
                         <td class="bad-score">{% widthratio measurement.nat64_image_score 1 100 %}%</td>
                     {% elif measurement.nat64_image_score < 0.95 %}
-                        <td class="good-score">{% widthratio measurement.nat64_image_score 1 100 %}%</td>
+                        <td class="mediocre-score">{% widthratio measurement.nat64_image_score 1 100 %}%</td>
                     {% else %}
-                        <td class="perfect-score">{% widthratio measurement.nat64_image_score 1 100 %}%</td>
+                        <td class="good-score">{% widthratio measurement.nat64_image_score 1 100 %}%</td>
                     {% endif %}
 
                     {% if measurement.v6only_image_score == 0 %}
@@ -88,9 +88,9 @@
                     {% elif measurement.v6only_image_score < 0.8 %}
                         <td class="bad-score">{% widthratio measurement.v6only_image_score 1 100 %}%</td>
                     {% elif measurement.v6only_image_score < 0.95 %}
-                        <td class="good-score">{% widthratio measurement.v6only_image_score 1 100 %}%</td>
+                        <td class="mediocre-score">{% widthratio measurement.v6only_image_score 1 100 %}%</td>
                     {% else %}
-                        <td class="perfect-score">{% widthratio measurement.v6only_image_score 1 100 %}%</td>
+                        <td class="good-score">{% widthratio measurement.v6only_image_score 1 100 %}%</td>
                     {% endif %}
                 </tr>
             {% endfor %}

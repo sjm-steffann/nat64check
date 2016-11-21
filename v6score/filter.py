@@ -87,9 +87,9 @@ def score_filter(attribute):
             return (
                 ('N', 'Untested'),
                 ('U', 'Unreachable'),
-                ('B', 'Bad'),
-                ('G', 'Good'),
-                ('P', 'Perfect'),
+                ('B', 'Poor'),
+                ('G', 'Mediocre'),
+                ('P', 'Good'),
             )
 
         def queryset(self, request, queryset):
