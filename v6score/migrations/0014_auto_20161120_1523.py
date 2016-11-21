@@ -5,19 +5,13 @@ from __future__ import unicode_literals
 from django.db import migrations
 
 
-def migrate_website_to_url(apps, schema_editor):
-    # noinspection PyPep8Naming
-    Measurement = apps.get_model('v6score', 'Measurement')
-    for measurement in Measurement.objects.filter(url=''):
-        measurement.url = 'http://{}/'.format(measurement.website.hostname)
-        measurement.save()
-
-
 class Migration(migrations.Migration):
     dependencies = [
         ('v6score', '0013_measurement_url'),
     ]
 
     operations = [
-        migrations.RunPython(migrate_website_to_url)
+        migrations.RunSQL("update v6score_measurement set url=("
+                          "select 'http://'||hostname from v6score_website where v6score_website.id=website_id"
+                          ") where url='';")
     ]
