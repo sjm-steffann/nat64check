@@ -79,14 +79,17 @@ def ignore_signals():
 class MeasurementManager(models.Manager):
     @staticmethod
     def get_measurement_for_url(url, force_new=False):
-        measurement = Measurement.objects.filter(url=url, finished=None).order_by('requested').first()
+        measurement = Measurement.objects.filter(url=url, started=None).order_by('requested').first()
         if measurement:
             if not measurement.manual:
                 # Mark as manual
                 measurement.manual = True
 
-            measurement.requested = timezone.now()
-            measurement.save()
+            if not measurement.started or measurement.started < (timezone.now() - timedelta(minutes=5)):
+                # Measurement not started, or measurement started more than 5 minutes ago (broken)
+                measurement.requested = timezone.now()
+                measurement.started = None
+                measurement.save()
         else:
             recent = timezone.now() - timedelta(minutes=10)
             measurement = Measurement.objects.filter(url=url, finished__gt=recent).order_by('-finished').first()
@@ -98,14 +101,15 @@ class MeasurementManager(models.Manager):
 
 
 class Measurement(models.Model):
-    url = models.URLField()
+    url = models.URLField(db_index=True)
 
-    manual = models.BooleanField(default=False)
-    retry_for = models.ForeignKey('self', blank=True, null=True)
+    manual = models.BooleanField(default=False, db_index=True)
+    retry_for = models.ForeignKey('self', blank=True, null=True, db_index=True)
 
-    requested = models.DateTimeField()
-    started = models.DateTimeField(blank=True, null=True)
-    finished = models.DateTimeField(blank=True, null=True)
+    requested = models.DateTimeField(db_index=True)
+    started = models.DateTimeField(blank=True, null=True, db_index=True)
+    finished = models.DateTimeField(blank=True, null=True, db_index=True)
+    latest = models.BooleanField(default=False, db_index=True)
 
     dns_results = ArrayField(models.GenericIPAddressField(), blank=True, default=list)
 
@@ -129,13 +133,19 @@ class Measurement(models.Model):
     nat64_data = JSONField(blank=True, null=True)
     nat64_debug = models.TextField(blank=True)
 
-    v6only_image_score = models.FloatField(blank=True, null=True)
-    nat64_image_score = models.FloatField(blank=True, null=True)
+    v6only_image_score = models.FloatField(blank=True, null=True, db_index=True)
+    nat64_image_score = models.FloatField(blank=True, null=True, db_index=True)
 
-    v6only_resource_score = models.FloatField(blank=True, null=True)
-    nat64_resource_score = models.FloatField(blank=True, null=True)
+    v6only_resource_score = models.FloatField(blank=True, null=True, db_index=True)
+    nat64_resource_score = models.FloatField(blank=True, null=True, db_index=True)
 
     objects = MeasurementManager()
+
+    class Meta:
+        index_together = [
+            ['v6only_image_score', 'nat64_image_score'],
+            ['v6only_resource_score', 'nat64_resource_score'],
+        ]
 
     def __str__(self):
         prefix = 'Manual ' if self.manual else ''
@@ -444,6 +454,10 @@ class Measurement(models.Model):
         else:
             logger.error("{}: did not load over IPv4-only, unable to perform image test".format(self.url))
 
+        # Set all other "latest" flags to false
+        Measurement.objects.filter(url=self.url).update(latest=False)
+
+        self.latest = True
         self.save()
 
         return return_value

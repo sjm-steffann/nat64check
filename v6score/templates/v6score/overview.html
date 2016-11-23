@@ -15,12 +15,13 @@
         {% csrf_token %}
     </form>
 
-    <div class="results">
-        <div class="search">
-            <form id="form2">
+    <form id="form2">
+        <div class="results">
+            <div class="search">
                 <input name="search" value="{{ search }}" autofocus placeholder="Search" class="results-search">
                 <button type="submit" class="submit-results-search"><span class="fa fa-search"></span></button>
 
+                <input type="hidden" name="page" value="{{ page }}">
                 <input type="hidden" name="test" value="{{ test }}">
                 <input type="hidden" name="score" value="{{ score }}">
 
@@ -53,49 +54,59 @@
                 {% else %}
                     <button name="score" value="good" class="filter-results good">Good</button>
                 {% endif %}
-            </form>
+            </div>
         </div>
-    </div>
 
-    <div class="results-main">
-        <table class="results-table">
-            <tr>
-                <th>URL</th>
-                <th>When</th>
-                <th>NAT64</th>
-                <th>IPv6-only</th>
-            </tr>
-            {% for measurement in measurements %}
+        <div class="results-main">
+            <table class="results-table">
                 <tr>
-                    <td>
-                        <a href="{% url 'measurement' measurement.pk %}">{{ measurement.url }}</a>
-                    </td>
-
-                    <td>{{ measurement.finished }}</td>
-
-                    {% if measurement.nat64_image_score == 0 %}
-                        <td class="no-score">Unreachable</td>
-                    {% elif measurement.nat64_image_score < 0.8 %}
-                        <td class="bad-score">{% widthratio measurement.nat64_image_score 1 100 %}%</td>
-                    {% elif measurement.nat64_image_score < 0.95 %}
-                        <td class="mediocre-score">{% widthratio measurement.nat64_image_score 1 100 %}%</td>
-                    {% else %}
-                        <td class="good-score">{% widthratio measurement.nat64_image_score 1 100 %}%</td>
-                    {% endif %}
-
-                    {% if measurement.v6only_image_score == 0 %}
-                        <td class="no-score">Unreachable</td>
-                    {% elif measurement.v6only_image_score < 0.8 %}
-                        <td class="bad-score">{% widthratio measurement.v6only_image_score 1 100 %}%</td>
-                    {% elif measurement.v6only_image_score < 0.95 %}
-                        <td class="mediocre-score">{% widthratio measurement.v6only_image_score 1 100 %}%</td>
-                    {% else %}
-                        <td class="good-score">{% widthratio measurement.v6only_image_score 1 100 %}%</td>
-                    {% endif %}
+                    <th>URL</th>
+                    <th class="details"></th>
+                    <th>When</th>
+                    <th class="score">NAT64</th>
+                    <th class="score">IPv6-only</th>
                 </tr>
+                {% for measurement in measurements %}
+                    <tr>
+                        <td>
+                            {{ measurement.url }}
+                        </td>
+
+                        <td>
+                            <a href="{% url 'measurement' measurement.pk %}">Details</a>
+                        </td>
+
+                        <td>{{ measurement.finished }}</td>
+
+                        {% if measurement.nat64_image_score == 0 %}
+                            <td class="no-score">Unreachable</td>
+                        {% elif measurement.nat64_image_score < 0.8 %}
+                            <td class="bad-score">{% widthratio measurement.nat64_image_score 1 100 %}%</td>
+                        {% elif measurement.nat64_image_score < 0.95 %}
+                            <td class="mediocre-score">{% widthratio measurement.nat64_image_score 1 100 %}%</td>
+                        {% else %}
+                            <td class="good-score">{% widthratio measurement.nat64_image_score 1 100 %}%</td>
+                        {% endif %}
+
+                        {% if measurement.v6only_image_score == 0 %}
+                            <td class="no-score">Unreachable</td>
+                        {% elif measurement.v6only_image_score < 0.8 %}
+                            <td class="bad-score">{% widthratio measurement.v6only_image_score 1 100 %}%</td>
+                        {% elif measurement.v6only_image_score < 0.95 %}
+                            <td class="mediocre-score">{% widthratio measurement.v6only_image_score 1 100 %}%</td>
+                        {% else %}
+                            <td class="good-score">{% widthratio measurement.v6only_image_score 1 100 %}%</td>
+                        {% endif %}
+                    </tr>
+                {% endfor %}
+            </table>
+
+            Pages:
+            {% for p in pages %}
+                <button name="page" value="{{ p }}">{{ p }}</button>
             {% endfor %}
-        </table>
-    </div>
+        </div>
+    </form>
 
     <div class="footer">
         Developed by Sander Steffann and Jan Žorž

@@ -248,6 +248,14 @@ input.submit-results-search:hover {
     font-weight: bold;
 }
 
+.results-table th.details {
+    width: 60px;
+}
+
+.results-table th.score {
+    width: 160px;
+}
+
 .results-table td {
     padding: 10px 20px;
     margin: 0;
