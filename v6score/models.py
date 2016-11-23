@@ -13,7 +13,7 @@ from collections import OrderedDict
 from datetime import timedelta
 from ipaddress import ip_address
 from typing import List, Iterable
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlunparse
 
 import skimage.io
 import yaml
@@ -29,6 +29,27 @@ from skimage.measure import compare_ssim
 from nat64check import settings
 
 logger = logging.getLogger(__name__)
+
+
+def get_addresses(hostname):
+    # Get DNS info
+    try:
+        a_records = subprocess.check_output(args=['dig', '+short', 'a', hostname],
+                                            stderr=subprocess.DEVNULL)
+        aaaa_records = subprocess.check_output(args=['dig', '+short', 'aaaa', hostname],
+                                               stderr=subprocess.DEVNULL)
+        dns_records = a_records + aaaa_records
+
+        dns_results = []
+        for line in dns_records.decode('utf-8').strip().split():
+            try:
+                dns_results.append(str(ip_address(line)))
+            except ValueError:
+                pass
+    except subprocess.CalledProcessError:
+        dns_results = []
+
+    return dns_results
 
 
 def start_ping(args: Iterable) -> subprocess.Popen:
@@ -166,6 +187,12 @@ class Measurement(models.Model):
         url_parts = urlparse(self.url, scheme='http')
         return url_parts.netloc
 
+    @hostname.setter
+    def hostname(self, new_hostname):
+        scheme, netloc, path, params, query, fragment = urlparse(self.url, scheme='http')
+        netloc = new_hostname
+        self.url = urlunparse((scheme, netloc, path, params, query, fragment))
+
     @property
     def v6only_score(self):
         if self.v6only_resource_score is None:
@@ -221,23 +248,20 @@ class Measurement(models.Model):
             logger.error("{}: test already finished".format(self.url))
             return
 
-        # Get DNS info
-        try:
-            a_records = subprocess.check_output(args=['dig', '+short', 'a', self.hostname],
-                                                stderr=subprocess.DEVNULL)
-            aaaa_records = subprocess.check_output(args=['dig', '+short', 'aaaa', self.hostname],
-                                                   stderr=subprocess.DEVNULL)
-            dns_records = a_records + aaaa_records
+        dns_results = get_addresses(self.hostname)
 
-            self.dns_results = []
-            for line in dns_records.decode('utf-8').strip().split():
-                try:
-                    self.dns_results.append(str(ip_address(line)))
-                except ValueError:
-                    pass
-        except subprocess.CalledProcessError:
-            self.dns_results = []
+        # If no records and no www in URL then try again with www
+        if not dns_results and not self.hostname.startswith('www.'):
+            try_hostname = 'www.' + self.hostname
+            dns_results = get_addresses(try_hostname)
+            if dns_results:
+                logger.warning("Hostname {} didn't resolve, using {}".format(self.hostname, try_hostname))
+                self.hostname = try_hostname
 
+        for address in dns_results:
+            logger.info("Found address for {}: {}".format(self.hostname, address))
+
+        self.dns_results = dns_results
         self.save()
 
     def run_ping_tests(self):
