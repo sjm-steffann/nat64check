@@ -11,8 +11,8 @@ import time
 import warnings
 from collections import OrderedDict
 from datetime import timedelta
-from ipaddress import ip_address, IPv4Address, IPv6Address
-from typing import List, Iterable, Union
+from ipaddress import IPv4Address, IPv6Address, ip_address
+from typing import Iterable, List, Union
 from urllib.parse import urlparse, urlunparse
 
 import skimage.io
@@ -198,14 +198,14 @@ class Measurement(models.Model):
         if self.v6only_resource_score is None:
             return self.v6only_image_score
 
-        return (self.v6only_image_score + self.v6only_resource_score) / 2
+        return (self.v6only_image_score + float(self.v6only_resource_score)) / 2
 
     @property
     def nat64_score(self):
         if self.nat64_resource_score is None:
             return self.nat64_image_score
 
-        return (self.nat64_image_score + self.nat64_resource_score) / 2
+        return (self.nat64_image_score + float(self.nat64_resource_score)) / 2
 
     @property
     def v4only_resources(self):
