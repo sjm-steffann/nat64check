@@ -494,8 +494,14 @@ class Measurement(models.Model):
 
         # Run tests
         self.run_dns_tests()
-        self.run_ping_tests()
-        return_value = self.run_browser_tests()
+
+        # Abort quickly if no DNS
+        if not self.dns_results:
+            logger.error("Aborting test, no addresses found")
+            return_value = 8
+        else:
+            self.run_ping_tests()
+            return_value = self.run_browser_tests()
 
         # Set all other "latest" flags to false
         Measurement.objects.filter(url=self.url, latest=True).update(latest=False)
