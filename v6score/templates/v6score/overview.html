@@ -1,5 +1,6 @@
 {% extends 'v6score/base.html' %}
 {% load static %}
+{% load query_tools %}
 
 {% block content %}
     <h1>nat64<span>check</span></h1>
@@ -15,9 +16,9 @@
         {% csrf_token %}
     </form>
 
-    <form id="form2">
-        <div class="results">
-            <div class="search">
+    <div class="results">
+        <div class="search">
+            <form id="form2">
                 <input name="search" value="{{ search }}" autofocus placeholder="Search" class="results-search">
                 <button type="submit" class="submit-results-search"><span class="fa fa-search"></span></button>
 
@@ -26,87 +27,101 @@
                 <input type="hidden" name="score" value="{{ score }}">
 
                 {% if nat64_selected %}
-                    <button name="test" value="" class="filter-results nat64 selected">NAT64</button>
+                    <a href="?{% override_in_query test="" %}" class="filter-results nat64 selected">NAT64</a>
                 {% else %}
-                    <button name="test" value="nat64" class="filter-results nat64">NAT64</button>
+                    <a href="?{% override_in_query test="nat64" %}" class="filter-results nat64">NAT64</a>
                 {% endif %}
 
                 {% if ipv6_selected %}
-                    <button name="test" value="" class="filter-results ipv6 selected">IPv6</button>
+                    <a href="?{% override_in_query test="" %}" class="filter-results ipv6 selected">IPv6</a>
                 {% else %}
-                    <button name="test" value="ipv6" class="filter-results ipv6">IPv6</button>
+                    <a href="?{% override_in_query test="ipv6" %}" class="filter-results ipv6">IPv6</a>
                 {% endif %}
 
                 {% if poor_selected %}
-                    <button name="score" value="" class="filter-results poor selected">Poor</button>
+                    <a href="?{% override_in_query score="" %}" class="filter-results poor selected">Poor</a>
                 {% else %}
-                    <button name="score" value="poor" class="filter-results poor">Poor</button>
+                    <a href="?{% override_in_query score="poor" %}" class="filter-results poor">Poor</a>
                 {% endif %}
 
                 {% if mediocre_selected %}
-                    <button name="score" value="" class="filter-results mediocre selected">Mediocre</button>
+                    <a href="?{% override_in_query score="" %}" class="filter-results mediocre selected">Mediocre</a>
                 {% else %}
-                    <button name="score" value="mediocre" class="filter-results mediocre">Mediocre</button>
+                    <a href="?{% override_in_query score="mediocre" %}" class="filter-results mediocre">Mediocre</a>
                 {% endif %}
 
                 {% if good_selected %}
-                    <button name="score" value="" class="filter-results good selected">Good</button>
+                    <a href="?{% override_in_query score="" %}" class="filter-results good selected">Good</a>
                 {% else %}
-                    <button name="score" value="good" class="filter-results good">Good</button>
+                    <a href="?{% override_in_query score="good" %}" class="filter-results good">Good</a>
                 {% endif %}
-            </div>
+            </form>
         </div>
+    </div>
 
-        <div class="results-main">
-            <table class="results-table">
-                <tr>
-                    <th>URL</th>
-                    <th class="details"></th>
-                    <th>When</th>
-                    <th class="score">NAT64</th>
-                    <th class="score">IPv6-only</th>
+    <div class="results-main">
+        <table class="results-table">
+            <tr>
+                <th class="details"></th>
+                <th>URL</th>
+                <th>When</th>
+                <th class="score">NAT64</th>
+                <th class="score">IPv6-only</th>
+            </tr>
+            {% for measurement in measurements %}
+                <tr onclick="location='{% url 'measurement' measurement.pk %}'" class="clickable">
+                    <td>
+                        <a href="{% url 'measurement' measurement.pk %}">Details</a>
+                    </td>
+
+                    <td>
+                        {{ measurement.url }}
+                    </td>
+
+                    <td>{{ measurement.finished }}</td>
+
+                    {% if measurement.nat64_image_score == 0 %}
+                        <td class="no-score">Unreachable</td>
+                    {% elif measurement.nat64_image_score < 0.8 %}
+                        <td class="bad-score">{% widthratio measurement.nat64_image_score 1 100 %}%</td>
+                    {% elif measurement.nat64_image_score < 0.95 %}
+                        <td class="mediocre-score">{% widthratio measurement.nat64_image_score 1 100 %}%</td>
+                    {% else %}
+                        <td class="good-score">{% widthratio measurement.nat64_image_score 1 100 %}%</td>
+                    {% endif %}
+
+                    {% if measurement.v6only_image_score == 0 %}
+                        <td class="no-score">Unreachable</td>
+                    {% elif measurement.v6only_image_score < 0.8 %}
+                        <td class="bad-score">{% widthratio measurement.v6only_image_score 1 100 %}%</td>
+                    {% elif measurement.v6only_image_score < 0.95 %}
+                        <td class="mediocre-score">{% widthratio measurement.v6only_image_score 1 100 %}%</td>
+                    {% else %}
+                        <td class="good-score">{% widthratio measurement.v6only_image_score 1 100 %}%</td>
+                    {% endif %}
                 </tr>
-                {% for measurement in measurements %}
-                    <tr>
-                        <td>
-                            {{ measurement.url }}
-                        </td>
-
-                        <td>
-                            <a href="{% url 'measurement' measurement.pk %}">Details</a>
-                        </td>
-
-                        <td>{{ measurement.finished }}</td>
-
-                        {% if measurement.nat64_image_score == 0 %}
-                            <td class="no-score">Unreachable</td>
-                        {% elif measurement.nat64_image_score < 0.8 %}
-                            <td class="bad-score">{% widthratio measurement.nat64_image_score 1 100 %}%</td>
-                        {% elif measurement.nat64_image_score < 0.95 %}
-                            <td class="mediocre-score">{% widthratio measurement.nat64_image_score 1 100 %}%</td>
-                        {% else %}
-                            <td class="good-score">{% widthratio measurement.nat64_image_score 1 100 %}%</td>
-                        {% endif %}
-
-                        {% if measurement.v6only_image_score == 0 %}
-                            <td class="no-score">Unreachable</td>
-                        {% elif measurement.v6only_image_score < 0.8 %}
-                            <td class="bad-score">{% widthratio measurement.v6only_image_score 1 100 %}%</td>
-                        {% elif measurement.v6only_image_score < 0.95 %}
-                            <td class="mediocre-score">{% widthratio measurement.v6only_image_score 1 100 %}%</td>
-                        {% else %}
-                            <td class="good-score">{% widthratio measurement.v6only_image_score 1 100 %}%</td>
-                        {% endif %}
-                    </tr>
-                {% endfor %}
-            </table>
-
-            Pages:
-            {% for p in pages %}
-                <button name="page" value="{{ p }}">{{ p }}</button>
             {% endfor %}
-        </div>
-    </form>
+            {% if measurements.has_other_pages %}
+                <tr class="pages">
+                    <th colspan="5">
+                        {% if measurements.has_previous %}
+                            <a href="?{% override_in_query page=measurements.previous_page_number %}" class="page">
+                                Previous
+                            </a>
+                        {% endif %}
+
+                        Page {{ measurements.number }} of {{ measurements.paginator.num_pages }}
+
+                        {% if measurements.has_next %}
+                            <a href="?{% override_in_query page=measurements.next_page_number %}" class="page">
+                                Next
+                            </a>
+                        {% endif %}
+                    </th>
+                </tr>
+            {% endif %}
+        </table>
+    </div>
 
     <div class="footer">
         Developed by Sander Steffann and Jan Žorž

@@ -1,5 +1,4 @@
-import math
-
+from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.db.models.query_utils import Q
 from django.shortcuts import render, get_object_or_404, redirect
 
@@ -68,16 +67,16 @@ def show_overview(request):
         elif good_selected:
             measurements = measurements.filter(nat64_image_score__gte=0.95, v6only_image_score__gte=0.95)
 
-    page_length = 50
-    max_page = math.ceil(measurements.count() / page_length)
-
+    paginator = Paginator(measurements, per_page=50)
+    page = request.GET.get('page')
     try:
-        page = max(1, min(max_page, int(request.GET['page'])))
-    except (KeyError, ValueError):
-        page = 1
-
-    range_start = (page - 1) * page_length
-    range_end = page * page_length
+        page_measurements = paginator.page(page)
+    except PageNotAnInteger:
+        # If page is not an integer, deliver first page.
+        page_measurements = paginator.page(1)
+    except EmptyPage:
+        # If page is out of range (e.g. 9999), deliver last page of results.
+        page_measurements = paginator.page(paginator.num_pages)
 
     return render(request, 'v6score/overview.html', {
         'url_form': url_form,
@@ -87,7 +86,7 @@ def show_overview(request):
         'score': score_filter,
 
         'page': page,
-        'pages': [p + 1 for p in range(0, max_page)],
+        'paginator': paginator,
 
         'nat64_selected': nat64_selected,
         'ipv6_selected': ipv6_selected,
@@ -95,7 +94,7 @@ def show_overview(request):
         'mediocre_selected': mediocre_selected,
         'good_selected': good_selected,
 
-        'measurements': measurements[range_start:range_end],
+        'measurements': page_measurements,
     })
 
 

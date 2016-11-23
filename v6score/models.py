@@ -454,10 +454,6 @@ class Measurement(models.Model):
         else:
             logger.error("{}: did not load over IPv4-only, unable to perform image test".format(self.url))
 
-        # Set all other "latest" flags to false
-        Measurement.objects.filter(url=self.url).update(latest=False)
-
-        self.latest = True
         self.save()
 
         return return_value
@@ -475,6 +471,10 @@ class Measurement(models.Model):
         self.run_ping_tests()
         return_value = self.run_browser_tests()
 
+        # Set all other "latest" flags to false
+        Measurement.objects.filter(url=self.url, latest=True).update(latest=False)
+
+        self.latest = True
         self.finished = timezone.now()
         self.save()
 

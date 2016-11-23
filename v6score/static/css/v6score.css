@@ -158,7 +158,12 @@ ul.errorlist {
     box-shadow: inset -1px 4px 20px -6px #000;
 }
 
-.filter-results {
+.filter-results,
+.page {
+    text-align: center;
+    line-height: 17px;
+    display: inline-block;
+    text-decoration: none;
     border-radius: 30px;
     border: none;
     background-color: #878787;
@@ -168,14 +173,14 @@ ul.errorlist {
     min-width: 70px;
     opacity: 0.3;
     margin: 0 10px 0 10px;
-    cursor: pointer;
 }
 
 .filter-results.selected {
     opacity: 1;
 }
 
-.filter-results:hover {
+.filter-results:hover,
+.page:hover {
     opacity: 1;
 }
 
@@ -237,8 +242,16 @@ input.submit-results-search:hover {
     background-color: #ECEAEA;
 }
 
+.results-table tr.clickable {
+    cursor: pointer;
+}
+
 .results-table tr:nth-child(2n+1) {
     background-color: white;
+}
+
+.results-table tr:hover {
+    background-color: #d1d1d1;
 }
 
 .results-table th {
