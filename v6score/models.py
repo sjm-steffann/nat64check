@@ -11,8 +11,8 @@ import time
 import warnings
 from collections import OrderedDict
 from datetime import timedelta
-from ipaddress import ip_address
-from typing import List, Iterable
+from ipaddress import ip_address, IPv4Address, IPv6Address
+from typing import List, Iterable, Union
 from urllib.parse import urlparse, urlunparse
 
 import skimage.io
@@ -31,7 +31,7 @@ from nat64check import settings
 logger = logging.getLogger(__name__)
 
 
-def get_addresses(hostname):
+def get_addresses(hostname) -> List[Union[IPv4Address, IPv6Address]]:
     # Get DNS info
     try:
         a_records = subprocess.check_output(args=['dig', '+short', 'a', hostname],
@@ -254,7 +254,9 @@ class Measurement(models.Model):
         if not dns_results and not self.hostname.startswith('www.'):
             try_hostname = 'www.' + self.hostname
             dns_results = get_addresses(try_hostname)
-            if dns_results:
+            if not dns_results:
+                logger.error("Hostname {} doesn't resolve".format(self.hostname))
+            else:
                 logger.warning("Hostname {} didn't resolve, using {}".format(self.hostname, try_hostname))
                 self.hostname = try_hostname
 
