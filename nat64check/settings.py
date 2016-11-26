@@ -60,6 +60,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'django_settings_export.settings_export',
             ],
         },
     },
@@ -120,8 +121,17 @@ V4PROXY = 'http://v4only.proxy.ipv6-lab.net:80'
 V6PROXY = 'http://v6only.proxy.ipv6-lab.net:80'
 NAT64PROXY = 'http://nat64.proxy.ipv6-lab.net:80'
 
+# Empty piwik settings
+PIWIK_SITE_ID = None
+PIWIK_URL = ''
+
 # Override from local settings
 try:
     from .local_settings import *
 except ImportError:
     pass
+
+SETTINGS_EXPORT = [
+    'PIWIK_SITE_ID',
+    'PIWIK_URL',
+]

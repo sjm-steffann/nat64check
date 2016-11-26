@@ -10,3 +10,4 @@ django_debug_toolbar
 psycopg2
 pygments
 django-piwik
+django-settings-export
