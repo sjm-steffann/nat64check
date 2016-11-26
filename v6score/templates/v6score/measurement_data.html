@@ -167,19 +167,37 @@
                         </a>
                     {% endif %}
                 </td>
-                <td>
-                    {% if measurement.v6only_image %}
-                        <a href="{{ measurement.v6only_image.url }}" target="_blank">
-                            <img style="width: 100%" alt="IPv6-only" src="{{ measurement.v6only_image.url }}">
-                        </a>
-                    {% endif %}
+                <td style="white-space: nowrap">
+                    {% spaceless %}
+                        {% if measurement.v4only_image and measurement.v6only_image %}
+                            <img style="width: 100%" alt="IPv4-only" src="{{ measurement.v4only_image.url }}">
+                            <a style="position: relative; left: -100%" href="{{ measurement.v6only_image.url }}"
+                               target="_blank">
+                                <img class="blend-on-hover" style="width: 100%" alt="IPv6-only"
+                                     src="{{ measurement.v6only_image.url }}">
+                            </a>
+                        {% elif measurement.v6only_image %}
+                            <a href="{{ measurement.v6only_image.url }}" target="_blank">
+                                <img style="width: 100%" alt="IPv6-only" src="{{ measurement.v6only_image.url }}">
+                            </a>
+                        {% endif %}
+                    {% endspaceless %}
                 </td>
-                <td>
-                    {% if measurement.nat64_image %}
-                        <a href="{{ measurement.nat64_image.url }}" target="_blank">
-                            <img style="width: 100%" alt="NAT64" src="{{ measurement.nat64_image.url }}">
-                        </a>
-                    {% endif %}
+                <td style="white-space: nowrap">
+                    {% spaceless %}
+                        {% if measurement.v4only_image and measurement.nat64_image %}
+                            <img style="width: 100%" alt="IPv4-only" src="{{ measurement.v4only_image.url }}">
+                            <a style="position: relative; left: -100%" href="{{ measurement.nat64_image.url }}"
+                               target="_blank">
+                                <img class="blend-on-hover" style="width: 100%" alt="IPv6-only"
+                                     src="{{ measurement.nat64_image.url }}">
+                            </a>
+                        {% elif measurement.nat64_image %}
+                            <a href="{{ measurement.nat64_image.url }}" target="_blank">
+                                <img style="width: 100%" alt="IPv6-only" src="{{ measurement.nat64_image.url }}">
+                            </a>
+                        {% endif %}
+                    {% endspaceless %}
                 </td>
             </tr>
         </table>
@@ -187,15 +205,6 @@
 
     <br>
 
-    <form method="post" action="{% url 'overview' %}">
-        {% csrf_token %}
-        <input type="hidden" name="url" value="{{ url }}">
-        <input type="hidden" name="force_new" value="1">
-
-        Not happy? Fix your website and
-        <button type="submit">test again</button>
-        !
-    </form>
 
 {% else %}
     <script type="application/javascript">

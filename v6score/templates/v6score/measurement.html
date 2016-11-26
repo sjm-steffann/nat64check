@@ -1,6 +1,22 @@
 {% extends 'v6score/base.html' %}
 
 {% block content %}
+    <h1 class="detail">nat64<span>check</span></h1>
+
+    <div class="details-header">
+        {{ measurement.hostname }}
+
+        <div class="retest">
+            <form method="post" action="{% url 'overview' %}">
+                {% csrf_token %}
+                <input type="hidden" name="url" value="{{ url }}">
+                <input type="hidden" name="force_new" value="1">
+
+                <button class="retest-button"><span class="fa fa-check"></span> Test again</button>
+            </form>
+        </div>
+    </div>
+
     <div style="margin: 20px">
         <h2>Measurement #{{ measurement.pk }}</h2>
 

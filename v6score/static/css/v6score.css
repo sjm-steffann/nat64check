@@ -29,6 +29,10 @@ body {
     font-style: normal;
 }
 
+button {
+    cursor: pointer;
+}
+
 .fa {
     display: inline-block;
     font: normal normal normal 14px/1 FontAwesome;
@@ -106,7 +110,6 @@ div.search-box-submit button {
     border: 0;
     background: none;
     margin: 0;
-    cursor: pointer;
     font-size: 3em;
     line-height: 65px;
     color: #fff;
@@ -173,6 +176,37 @@ ul.errorlist {
     padding: 20px;
 }
 
+.retest {
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.retest-button {
+    border: 1px solid #26AA4F;
+    border-radius: 40px;
+    background-color: #26AA4F;
+    font-size: 0.6em;
+    line-height: 50px;
+    color: #fff;
+    padding: 10px 20px;
+    margin: 0 20px 0 70px;
+}
+
+.retest-button .fa {
+    font-size: 3em;
+    display: inline-block;
+    vertical-align: -20%;
+}
+
+.details-header {
+    background: #a4a3a3 url(../img/shadow.png) repeat-x top;
+    color: #fff;
+    padding: 50px;
+    font-size: 2em;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+}
+
 .filter-results,
 .page {
     text-align: center;
@@ -233,7 +267,6 @@ button.submit-results-search {
     line-height: 20px;
     color: #fff;
     padding: 10px 0;
-    cursor: pointer;
 }
 
 input.submit-results-search:hover {
@@ -296,4 +329,9 @@ input.submit-results-search:hover {
     color: #fff;
     margin: 0;
     padding: 20px 0;
+}
+
+.blend-on-hover:hover {
+    mix-blend-mode: difference;
+    opacity: 0.87;
 }
