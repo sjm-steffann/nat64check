@@ -1,10 +1,12 @@
 {% extends 'v6score/base.html' %}
 
+{% load static %}
+
 {% block content %}
     <h1 class="detail">nat64<span>check</span></h1>
 
     <div class="details-header">
-        {{ measurement.hostname }}
+        <b>{{ measurement.hostname }}</b>
 
         <div class="retest">
             <form method="post" action="{% url 'overview' %}">
@@ -15,9 +17,84 @@
                 <button class="retest-button"><span class="fa fa-check"></span> Test again</button>
             </form>
         </div>
+
+        <div class="last-test">
+            Last test:<br>
+            <b>{{ measurement.finished|date:"j F Y, H:i T"|default:"Never" }}</b>
+        </div>
     </div>
 
-    <div style="margin: 20px">
+    <div class="detail-main">
+        {% if measurement.finished %}
+            {% if measurement.v6only_score >= 0 or measurement.nat64_score >= 0 %}
+                <table class="measurement">
+                    <tr>
+                        <td colspan="3">
+                            <h2>Image match</h2>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th class="top">NAT64</th>
+                        <th class="top">IPv4-only</th>
+                        <th class="top">IPv6-only</th>
+                    </tr>
+                    <tr>
+                        {% spaceless %}
+                            <td class="image">
+                                {% if measurement.v4only_image and measurement.nat64_image %}
+                                    <img alt="IPv4-only" src="{{ measurement.v4only_image.url }}">
+                                    <a style="position: relative; left: -100%" href="{{ measurement.nat64_image.url }}"
+                                       target="_blank">
+                                        <img class="blend-on-hover" alt="NAT64"
+                                             src="{{ measurement.nat64_image.url }}">
+                                    </a>
+                                {% elif measurement.nat64_image %}
+                                    <a href="{{ measurement.nat64_image.url }}" target="_blank">
+                                        <img alt="NAT64" src="{{ measurement.nat64_image.url }}">
+                                    </a>
+                                {% else %}
+                                    <img alt="No IPv4-only" src="{% static 'img/no-image.png' %}">
+                                {% endif %}
+                            </td>
+                            <td class="image">
+                                {% if measurement.v4only_image %}
+                                    <a href="{{ measurement.v4only_image.url }}" target="_blank">
+                                        <img alt="IPv4-only" src="{{ measurement.v4only_image.url }}">
+                                    </a>
+                                {% else %}
+                                    <img alt="No IPv4-only" src="{% static 'img/no-image.png' %}">
+                                {% endif %}
+                            </td>
+                            <td class="image">
+                                {% if measurement.v4only_image and measurement.v6only_image %}
+                                    <img alt="IPv4-only" src="{{ measurement.v4only_image.url }}">
+                                    <a style="position: relative; left: -100%" href="{{ measurement.v6only_image.url }}"
+                                       target="_blank">
+                                        <img class="blend-on-hover" alt="IPv6-only"
+                                             src="{{ measurement.v6only_image.url }}">
+                                    </a>
+                                {% elif measurement.v6only_image %}
+                                    <a href="{{ measurement.v6only_image.url }}" target="_blank">
+                                        <img alt="IPv6-only" src="{{ measurement.v6only_image.url }}">
+                                    </a>
+                                {% else %}
+                                    <img alt="No IPv6-only" src="{% static 'img/no-image.png' %}">
+                                {% endif %}
+                            </td>
+                        {% endspaceless %}
+                    </tr>
+                </table>
+            {% endif %}
+        {% else %}
+            <script type="application/javascript">
+                setTimeout(function () {
+                    document.location.reload();
+                }, 2500);
+            </script>
+        {% endif %}
+
+
+
         <h2>Measurement #{{ measurement.pk }}</h2>
 
         {% include 'v6score/measurement_data.html' with measurement=measurement %}

@@ -1,9 +1,9 @@
 {% for latency in latencies %}
     <span style="display: inline-block; width: 10vw">
         {% if latency == -1 %}
-            <span style="color: red">lost</span><br>
+            <span class="bad-score">lost</span><br>
         {% elif latency == -2 %}
-            <span style="color: orange">filtered</span><br>
+            <span class="mediocre-score">filtered</span><br>
         {% else %}
             {{ latency|floatformat:3 }} ms
         {% endif %}
