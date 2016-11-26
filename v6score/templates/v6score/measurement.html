@@ -3,7 +3,9 @@
 {% load static %}
 
 {% block content %}
-    <h1 class="detail">nat64<span>check</span></h1>
+    <h1 class="detail"><a href="{% url 'overview' %}">
+        nat64<span>check</span>
+    </a></h1>
 
     <div class="details-header">
         <b>{{ measurement.hostname }}</b>
@@ -29,24 +31,47 @@
             {% if measurement.v6only_score >= 0 or measurement.nat64_score >= 0 %}
                 <table class="measurement">
                     <tr>
-                        <td colspan="3">
-                            <h2>Image match</h2>
-                        </td>
+                        <th colspan="3">
+                            Image match
+                        </th>
                     </tr>
                     <tr>
-                        <th class="top">NAT64</th>
-                        <th class="top">IPv4-only</th>
-                        <th class="top">IPv6-only</th>
+                        <th class="top">
+                            NAT64
+                            {% if measurement.nat64_image_score == 0 or measurement.nat64_image_score is None %}
+                                <div class="image-score poor"><span class="fa fa-bolt fa-lg"></span></div>
+                            {% elif measurement.nat64_image_score < 0.8 %}
+                                <div class="image-score poor">{% widthratio measurement.nat64_image_score 1 100 %}%</div>
+                            {% elif measurement.nat64_score < 0.95 %}
+                                <div class="image-score mediocre2">{% widthratio measurement.nat64_image_score 1 100 %}%</div>
+                            {% else %}
+                                <div class="image-score good">{% widthratio measurement.nat64_image_score 1 100 %}%</div>
+                            {% endif %}
+                        </th>
+                        <th class="top">
+                            IPv4-only
+                        </th>
+                        <th class="top">
+                            IPv6-only
+                            {% if measurement.v6only_image_score == 0 or measurement.v6only_image_score is None %}
+                                <div class="image-score poor"><span class="fa fa-bolt fa-lg"></span></div>
+                            {% elif measurement.v6only_image_score < 0.8 %}
+                                <div class="image-score poor">{% widthratio measurement.v6only_image_score 1 100 %}%</div>
+                            {% elif measurement.v6only_score < 0.95 %}
+                                <div class="image-score mediocre2">{% widthratio measurement.v6only_image_score 1 100 %}%</div>
+                            {% else %}
+                                <div class="image-score good">{% widthratio measurement.v6only_image_score 1 100 %}%</div>
+                            {% endif %}
+                        </th>
                     </tr>
                     <tr>
                         {% spaceless %}
                             <td class="image">
                                 {% if measurement.v4only_image and measurement.nat64_image %}
                                     <img alt="IPv4-only" src="{{ measurement.v4only_image.url }}">
-                                    <a style="position: relative; left: -100%" href="{{ measurement.nat64_image.url }}"
-                                       target="_blank">
-                                        <img class="blend-on-hover" alt="NAT64"
-                                             src="{{ measurement.nat64_image.url }}">
+                                    <a class="overlay" href="{{ measurement.nat64_image.url }}" target="_blank"
+                                       title="Difference between IPv4-only and NAT64">
+                                        <img class="blend-on-hover" alt="NAT64" src="{{ measurement.nat64_image.url }}">
                                     </a>
                                 {% elif measurement.nat64_image %}
                                     <a href="{{ measurement.nat64_image.url }}" target="_blank">
@@ -68,8 +93,8 @@
                             <td class="image">
                                 {% if measurement.v4only_image and measurement.v6only_image %}
                                     <img alt="IPv4-only" src="{{ measurement.v4only_image.url }}">
-                                    <a style="position: relative; left: -100%" href="{{ measurement.v6only_image.url }}"
-                                       target="_blank">
+                                    <a class="overlay" href="{{ measurement.v6only_image.url }}" target="_blank"
+                                       title="Difference between IPv4-only and IPv6-only">
                                         <img class="blend-on-hover" alt="IPv6-only"
                                              src="{{ measurement.v6only_image.url }}">
                                     </a>
