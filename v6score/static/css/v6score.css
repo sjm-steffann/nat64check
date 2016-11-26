@@ -20,6 +20,15 @@ body {
     font-style: normal;
 }
 
+@font-face {
+    font-family: ocr-a-std;
+    src: url('../fonts/ocr-a-std.woff2') format("woff2"),
+    url('../fonts/ocr-a-std.woff') format("woff"),
+    url('../fonts/ocr-a-std.otf') format("opentype");
+    font-weight: 400;
+    font-style: normal;
+}
+
 .fa {
     display: inline-block;
     font: normal normal normal 14px/1 FontAwesome;
