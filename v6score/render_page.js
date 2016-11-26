@@ -28,6 +28,11 @@ function capitalize(s) {
 // Create a snapshot
 function takeScreenshot() {
     try {
+        // Prevent transparent background
+        page.evaluate(function () {
+            document.body.bgColor = 'white';
+        });
+
         output.image = page.renderBase64('png');
         console.log(JSON.stringify(output));
         phantom.exit(0);
@@ -147,6 +152,6 @@ page.open(address, function (status) {
         clearTimeout(abandonHopeTimer);
 
         // Set a timer for the screenshot. Further network activity will delay the timer to allow the page to finish.
-        screenshotTimer = setTimeout(takeScreenshot, 2500);
+        screenshotTimer = setTimeout(takeScreenshot, 500);
     }
 });
