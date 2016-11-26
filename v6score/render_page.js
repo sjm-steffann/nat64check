@@ -60,7 +60,7 @@ function init_page(newPage) {
     newPage.customHeaders = {
         "DNT": "1"
     };
-    newPage.settings.resourceTimeout = 10000;
+    newPage.settings.resourceTimeout = 30000;
     newPage.onResourceRequested = function (data) {
         // Don't include the data from data URLs
         var url = data.url;
@@ -125,7 +125,7 @@ function init_page(newPage) {
 init_page(page);
 
 // Fallback
-abandonHopeTimer = setTimeout(abandonHope, 30000);
+abandonHopeTimer = setTimeout(abandonHope, 45000);
 
 // Open and render to stdout when done
 page.open(address, function (status) {
