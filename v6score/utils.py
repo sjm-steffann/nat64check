@@ -69,7 +69,7 @@ def http_code_data(code, error=False, timeout=False):
             out['status_text'] = 'Permanent'
 
     elif code >= 400:
-        out['class'] = 'poor-score'
+        out['status_class'] = 'poor-score'
 
         if code == 400:
             out['status_text'] = 'Bad request'
