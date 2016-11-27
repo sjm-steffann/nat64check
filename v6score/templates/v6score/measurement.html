@@ -20,10 +20,13 @@
 
         function toggle_resource_table() {
             var row = document.getElementById('resource-table');
+            var icon = document.getElementById('toggle_resource_table_icon');
             if (row.style.display == 'none') {
                 row.style.display = 'table-row';
+                icon.innerText = '▼';
             } else {
                 row.style.display = 'none';
+                icon.innerText = '►';
             }
         }
     </script>
@@ -142,8 +145,8 @@
                         {% endspaceless %}
                     </tr>
 
-                    <tr>
-                        <th colspan="3">Resources match</th>
+                    <tr onclick="toggle_resource_table()" style="cursor: pointer;">
+                        <th colspan="3">Resources match <span id="toggle_resource_table_icon">►</span></th>
                     </tr>
                     <tr onclick="toggle_resource_table()" style="cursor: pointer;">
                         {% spaceless %}
@@ -169,7 +172,7 @@
                                     {% endif %}
                                 </div>
                             </td>
-                            <td style="text-align: center; vertical-align: middle; font-size: 1.3em">▼ Click for details ▼</td>
+                            <td></td>
                             <td class="score-bar">
                                 <div class="score-bar">
                                     {% if measurement.v6only_resource_score == 0 %}
