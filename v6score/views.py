@@ -1,9 +1,10 @@
-from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
+from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.db.models.query_utils import Q
-from django.shortcuts import render, get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, redirect, render
 
 from v6score.forms import URLForm
 from v6score.models import Measurement
+from v6score.utils import combine_resources
 
 
 def show_overview(request):
@@ -100,7 +101,9 @@ def show_overview(request):
 
 def show_measurement(request, measurement_id):
     measurement = get_object_or_404(Measurement, pk=measurement_id)
+    resources = combine_resources(measurement.v4only_data, measurement.nat64_data, measurement.v6only_data)
     return render(request, 'v6score/measurement.html', {
         'measurement': measurement,
+        'resources': resources,
         'url': measurement.url,
     })

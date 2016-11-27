@@ -2,6 +2,33 @@
 
 {% load static %}
 
+{% block head %}
+    <script type="application/javascript">
+        function mark_resource(source, url, className, new_content) {
+            source.innerText = new_content;
+
+            if (url == '') {
+                // No url, so nothing to do
+                return;
+            }
+
+            var tr = document.querySelectorAll("tr[data-request='" + url + "']");
+            if (tr[0]) {
+                tr[0].className = className;
+            }
+        }
+
+        function toggle_resource_table() {
+            var row = document.getElementById('resource-table');
+            if (row.style.display == 'none') {
+                row.style.display = 'table-row';
+            } else {
+                row.style.display = 'none';
+            }
+        }
+    </script>
+{% endblock %}
+
 {% block content %}
     <h1 class="detail"><a href="{% url 'overview' %}">
         nat64<span>check</span>
@@ -116,9 +143,9 @@
                     </tr>
 
                     <tr>
-                        <th colspan="3">NAT64 resource score:</th>
+                        <th colspan="3">Resources match</th>
                     </tr>
-                    <tr>
+                    <tr onclick="toggle_resource_table()" style="cursor: pointer;">
                         {% spaceless %}
                             <td class="score-bar">
                                 <div class="score-bar">
@@ -142,7 +169,7 @@
                                     {% endif %}
                                 </div>
                             </td>
-                            <td></td>
+                            <td style="text-align: center; vertical-align: middle; font-size: 1.3em">▼ Click for details ▼</td>
                             <td class="score-bar">
                                 <div class="score-bar">
                                     {% if measurement.v6only_resource_score == 0 %}
@@ -166,6 +193,41 @@
                                 </div>
                             </td>
                         {% endspaceless %}
+                    </tr>
+
+                    <tr id="resource-table" style="display: none">
+                        <td class="resources" colspan="3">
+                            <div class="resources">
+                                <table class="resources">
+                                    <tr>
+                                        <th>URL</th>
+                                        <th>NAT64-only</th>
+                                        <th>IPv4-only</th>
+                                        <th>IPv6-only</th>
+                                    </tr>
+                                    {% for resource in resources %}
+                                        <tr data-request="{{ resource.url }}">
+                                            <td>{{ resource.method }} {{ resource.url }}</td>
+                                            <td title="{{ resource.nat64.location }}"
+                                                class="{{ resource.nat64.status_class }}"
+                                                onmouseenter="mark_resource(this, '{{ resource.nat64.location|escapejs }}', 'mark', '{{ resource.nat64.status_code }}')"
+                                                onmouseleave="mark_resource(this, '{{ resource.nat64.location|escapejs }}', '', '{{ resource.nat64.status_text }}')"
+                                            >{{ resource.nat64.status_text }}</td>
+                                            <td title="{{ resource.v4only.location }}"
+                                                class="{{ resource.v4only.status_class }}"
+                                                onmouseenter="mark_resource(this, '{{ resource.v4only.location|escapejs }}', 'mark', '{{ resource.v4only.status_code }}')"
+                                                onmouseleave="mark_resource(this, '{{ resource.v4only.location|escapejs }}', '', '{{ resource.v4only.status_text }}')"
+                                            >{{ resource.v4only.status_text }}</td>
+                                            <td title="{{ resource.v6only.location }}"
+                                                class="{{ resource.v6only.status_class }}"
+                                                onmouseenter="mark_resource(this, '{{ resource.v6only.location|escapejs }}', 'mark', '{{ resource.v6only.status_code }}')"
+                                                onmouseleave="mark_resource(this, '{{ resource.v6only.location|escapejs }}', '', '{{ resource.v6only.status_text }}')"
+                                            >{{ resource.v6only.status_text }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </table>
+                            </div>
+                        </td>
                     </tr>
                 {% else %}
                     <th colspan="3">
