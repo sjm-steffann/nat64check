@@ -95,7 +95,7 @@
                     {% if measurement.nat64_image_score == 0 %}
                         <td class="no-score">Unreachable</td>
                     {% elif measurement.nat64_image_score < 0.8 %}
-                        <td class="bad-score">{% widthratio measurement.nat64_image_score 1 100 %}%</td>
+                        <td class="poor-score">{% widthratio measurement.nat64_image_score 1 100 %}%</td>
                     {% elif measurement.nat64_image_score < 0.95 %}
                         <td class="mediocre-score">{% widthratio measurement.nat64_image_score 1 100 %}%</td>
                     {% else %}
@@ -105,7 +105,7 @@
                     {% if measurement.v6only_image_score == 0 %}
                         <td class="no-score">Unreachable</td>
                     {% elif measurement.v6only_image_score < 0.8 %}
-                        <td class="bad-score">{% widthratio measurement.v6only_image_score 1 100 %}%</td>
+                        <td class="poor-score">{% widthratio measurement.v6only_image_score 1 100 %}%</td>
                     {% elif measurement.v6only_image_score < 0.95 %}
                         <td class="mediocre-score">{% widthratio measurement.v6only_image_score 1 100 %}%</td>
                     {% else %}

@@ -1,7 +1,7 @@
 {% for latency in latencies %}
     <span class="latencies">
         {% if latency == -1 %}
-            <span class="bad-score">lost</span><br>
+            <span class="poor-score">lost</span><br>
         {% elif latency == -2 %}
             <span class="mediocre-score">filtered</span><br>
         {% else %}

@@ -2,19 +2,19 @@ def http_code_data(code, error=False, timeout=False):
     if code == 0:
         if timeout:
             return {
-                'status_class': 'bad-score',
+                'status_class': 'poor-score',
                 'status_text': 'Client timeout',
                 'status_code': 'Client timeout',
             }
         elif error:
             return {
-                'status_class': 'bad-score',
+                'status_class': 'poor-score',
                 'status_text': 'Client error',
                 'status_code': 'Client error',
             }
         else:
             return {
-                'status_class': 'bad-score',
+                'status_class': 'poor-score',
                 'status_text': 'No result',
                 'status_code': 'No result',
             }
@@ -69,7 +69,7 @@ def http_code_data(code, error=False, timeout=False):
             out['status_text'] = 'Permanent'
 
     elif code >= 400:
-        out['class'] = 'bad-score'
+        out['class'] = 'poor-score'
 
         if code == 400:
             out['status_text'] = 'Bad request'
