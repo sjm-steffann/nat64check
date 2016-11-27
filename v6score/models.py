@@ -194,6 +194,14 @@ class Measurement(models.Model):
         self.url = urlunparse((scheme, netloc, path, params, query, fragment))
 
     @property
+    def ipv4_dns_results(self):
+        return [address for address in map(ip_address, self.dns_results) if address.version == 4]
+
+    @property
+    def ipv6_dns_results(self):
+        return [address for address in map(ip_address, self.dns_results) if address.version == 6]
+
+    @property
     def v6only_score(self):
         if self.v6only_resource_score is None:
             return self.v6only_image_score

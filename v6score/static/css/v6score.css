@@ -60,6 +60,23 @@ button {
     content: "\f0e7";
 }
 
+.fa-spinner:before {
+    content: "\f110";
+}
+
+.fa-spin {
+    animation: fa-spin 2s infinite linear;
+}
+
+@keyframes fa-spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(359deg);
+    }
+}
+
 h1 {
     font-family: "OCR A Std", ocr-a-std, "CourierNew", Courier, monospace;
     font-size: 5em;
@@ -81,6 +98,17 @@ h1.detail {
 
 h1 span {
     color: #26AA4F;
+}
+
+div.credits {
+    background: #777;
+    padding: 10px;
+    text-align: center;
+}
+
+div.credits a {
+    display: inline-block;
+    width: 300px;
 }
 
 form.search-box {
@@ -213,6 +241,12 @@ ul.errorlist {
     vertical-align: -20%;
 }
 
+.retest-button[disabled] {
+    background-color: #999;
+    border-color: #aaa;
+    cursor: not-allowed;
+}
+
 .details-header {
     background: #a4a3a3 url(../img/shadow.png) repeat-x top;
     color: #fff;
@@ -235,6 +269,9 @@ table.measurement {
 table.measurement th,
 table.measurement td {
     padding: 0;
+    font-size: 1.6em;
+    color: #7f7f7f;
+    vertical-align: top;
 }
 
 table.measurement td.image {
@@ -254,10 +291,22 @@ table.measurement td.image a.overlay {
 }
 
 table.measurement th {
-    font-size: 2em;
     font-weight: 300;
+    font-size: 2em;
     color: #4e4e4e;
-    padding: 10px 0;
+}
+
+table.measurement th[colspan] {
+    padding: 20px 0 10px 0;
+}
+
+span.latencies {
+    display: inline-block;
+    width: 20%;
+}
+
+span.latencies span {
+    margin-right: 0.5em;
 }
 
 table.measurement th.top {
@@ -285,6 +334,38 @@ table.measurement th.top div.image-score {
     color: white;
     text-align: center;
     z-index: 999;
+}
+
+table.measurement td.separator {
+    padding: 10px 0;
+}
+
+table.measurement td.separator hr {
+    border: 1px solid #c2c2c2;
+}
+
+table.measurement td.score-bar {
+    white-space: nowrap;
+}
+
+table.measurement td.score-bar div.score-bar {
+    border-radius: 20px;
+    background: #bababa;
+    width: 100%;
+    height: 40px;
+    box-shadow: 0 3px 6px #999;
+    margin-bottom: 20px;
+}
+
+table.measurement td.score-bar div.score-bar div {
+    height: 100%;
+    border-radius: 20px;
+    text-align: right;
+    color: white;
+    font-size: 25px;
+    line-height: 40px;
+    padding-right: 10px;
+    box-sizing: border-box;
 }
 
 .last-test {
@@ -422,7 +503,7 @@ input.submit-results-search:hover {
 }
 
 .footer {
-    background-color: #AFA8A8;
+    background-color: #777;
     width: 100%;
     text-align: center;
     color: #fff;

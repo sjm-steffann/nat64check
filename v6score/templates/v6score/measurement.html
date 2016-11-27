@@ -16,20 +16,26 @@
                 <input type="hidden" name="url" value="{{ url }}">
                 <input type="hidden" name="force_new" value="1">
 
-                <button class="retest-button"><span class="fa fa-check"></span> Test again</button>
+                <button {% if not measurement.finished %}disabled="disabled"{% endif %} class="retest-button">
+                    {% if measurement.finished %}
+                        <span class="fa fa-check"></span> Test again
+                    {% else %}
+                        <span class="fa fa-spin fa-spinner"></span> Test in progress
+                    {% endif %}
+                </button>
             </form>
         </div>
 
         <div class="last-test">
-            Last test:<br>
+            Last test finished:<br>
             <b>{{ measurement.finished|date:"j F Y, H:i T"|default:"Never" }}</b>
         </div>
     </div>
 
     <div class="detail-main">
-        {% if measurement.finished %}
-            {% if measurement.v6only_score >= 0 or measurement.nat64_score >= 0 %}
-                <table class="measurement">
+        <table class="measurement">
+            {% if measurement.finished %}
+                {% if measurement.v6only_score >= 0 or measurement.nat64_score >= 0 %}
                     <tr>
                         <th colspan="3">
                             Image match
@@ -42,7 +48,7 @@
                                 <div class="image-score poor"><span class="fa fa-bolt fa-lg"></span></div>
                             {% elif measurement.nat64_image_score < 0.8 %}
                                 <div class="image-score poor">{% widthratio measurement.nat64_image_score 1 100 %}%</div>
-                            {% elif measurement.nat64_score < 0.95 %}
+                            {% elif measurement.nat64_image_score < 0.95 %}
                                 <div class="image-score mediocre2">{% widthratio measurement.nat64_image_score 1 100 %}%</div>
                             {% else %}
                                 <div class="image-score good">{% widthratio measurement.nat64_image_score 1 100 %}%</div>
@@ -57,7 +63,7 @@
                                 <div class="image-score poor"><span class="fa fa-bolt fa-lg"></span></div>
                             {% elif measurement.v6only_image_score < 0.8 %}
                                 <div class="image-score poor">{% widthratio measurement.v6only_image_score 1 100 %}%</div>
-                            {% elif measurement.v6only_score < 0.95 %}
+                            {% elif measurement.v6only_image_score < 0.95 %}
                                 <div class="image-score mediocre2">{% widthratio measurement.v6only_image_score 1 100 %}%</div>
                             {% else %}
                                 <div class="image-score good">{% widthratio measurement.v6only_image_score 1 100 %}%</div>
@@ -108,24 +114,191 @@
                             </td>
                         {% endspaceless %}
                     </tr>
-                </table>
+
+                    <tr>
+                        <th colspan="3">NAT64 resource score:</th>
+                    </tr>
+                    <tr>
+                        {% spaceless %}
+                            <td class="score-bar">
+                                <div class="score-bar">
+                                    {% if measurement.nat64_resource_score == 0 %}
+                                        <div class="poor">Unreachable</div>
+                                    {% elif measurement.nat64_resource_score < 0.8 %}
+                                        <div class="poor"
+                                             style="width: {% widthratio measurement.nat64_resource_score 1 100 %}%">
+                                            {% widthratio measurement.nat64_resource_score 1 100 %}%
+                                        </div>
+                                    {% elif measurement.nat64_resource_score < 0.95 %}
+                                        <div class="mediocre2"
+                                             style="width: {% widthratio measurement.nat64_resource_score 1 100 %}%">
+                                            {% widthratio measurement.nat64_resource_score 1 100 %}%
+                                        </div>
+                                    {% else %}
+                                        <div class="good"
+                                             style="width: {% widthratio measurement.nat64_resource_score 1 100 %}%">
+                                            {% widthratio measurement.nat64_resource_score 1 100 %}%
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td></td>
+                            <td class="score-bar">
+                                <div class="score-bar">
+                                    {% if measurement.v6only_resource_score == 0 %}
+                                        <div class="poor">Unreachable</div>
+                                    {% elif measurement.v6only_resource_score < 0.8 %}
+                                        <div class="poor"
+                                             style="width: {% widthratio measurement.v6only_resource_score 1 100 %}%">
+                                            {% widthratio measurement.v6only_resource_score 1 100 %}%
+                                        </div>
+                                    {% elif measurement.v6only_resource_score < 0.95 %}
+                                        <div class="mediocre2"
+                                             style="width: {% widthratio measurement.v6only_resource_score 1 100 %}%">
+                                            {% widthratio measurement.v6only_resource_score 1 100 %}%
+                                        </div>
+                                    {% else %}
+                                        <div class="good"
+                                             style="width: {% widthratio measurement.v6only_resource_score 1 100 %}%">
+                                            {% widthratio measurement.v6only_resource_score 1 100 %}%
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        {% endspaceless %}
+                    </tr>
+                {% else %}
+                    <th colspan="3">
+                        The test failed because the website could not be loaded over IPv4.
+                    </th>
+                {% endif %}
+            {% else %}
+                <tr>
+                    <th colspan="3">
+                        {% if measurement.started %}
+                            Please wait for the test to finish…
+                        {% else %}
+                            The test is scheduled for {{ measurement.requested|date:"j F Y, H:i T" }}, please wait for
+                            it to start…
+                        {% endif %}
+                    </th>
+                </tr>
             {% endif %}
-        {% else %}
-            <script type="application/javascript">
-                setTimeout(function () {
-                    document.location.reload();
-                }, 2500);
-            </script>
-        {% endif %}
 
+            {% if measurement.dns_results or measurement.finished %}
+                <tr>
+                    <td class="separator">
+                        <hr>
+                    </td>
+                    <td class="separator">
+                        <hr>
+                    </td>
+                    <td class="separator">
+                        <hr>
+                    </td>
+                </tr>
 
+                <tr>
+                    <th>DNS records</th>
+                    <td>
+                        {% for address in measurement.ipv4_dns_results %}
+                            {{ address }}<br>
+                        {% empty %}
+                            None
+                        {% endfor %}
+                    </td>
+                    <td>
+                        {% for address in measurement.ipv6_dns_results %}
+                            {{ address }}<br>
+                        {% empty %}
+                            None
+                        {% endfor %}
+                    </td>
+                </tr>
+            {% endif %}
 
-        <h2>Measurement #{{ measurement.pk }}</h2>
+            {% if measurement.ping4_latencies or measurement.finished %}
+                {% spaceless %}
+                    <tr>
+                        <td class="separator">
+                            <hr>
+                        </td>
+                        <td class="separator">
+                            <hr>
+                        </td>
+                        <td class="separator">
+                            <hr>
+                        </td>
+                    </tr>
 
-        {% include 'v6score/measurement_data.html' with measurement=measurement %}
+                    <tr>
+                        <th>Ping</th>
+                        <td>
+                            {% include 'v6score/latency_data.html' with latencies=measurement.ping4_latencies %}
+                        </td>
+                        <td>
+                            {% include 'v6score/latency_data.html' with latencies=measurement.ping6_latencies %}
+                        </td>
+                    </tr>
 
-        <br>
+                    <tr>
+                        <td class="separator">
+                            <hr>
+                        </td>
+                        <td class="separator">
+                            <hr>
+                        </td>
+                        <td class="separator">
+                            <hr>
+                        </td>
+                    </tr>
 
-        <a href="{% url 'overview' %}">Back to overview</a>
+                    <tr>
+                        <th>Ping (1500 byte packets)</th>
+                        <td>
+                            {% include 'v6score/latency_data.html' with latencies=measurement.ping4_1500_latencies %}
+                        </td>
+                        <td>
+                            {% include 'v6score/latency_data.html' with latencies=measurement.ping6_1500_latencies %}
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td class="separator">
+                            <hr>
+                        </td>
+                        <td class="separator">
+                            <hr>
+                        </td>
+                        <td class="separator">
+                            <hr>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <th>Ping (2000 byte "packets")</th>
+                        <td>
+                            {% include 'v6score/latency_data.html' with latencies=measurement.ping4_2000_latencies %}
+                        </td>
+                        <td>
+                            {% include 'v6score/latency_data.html' with latencies=measurement.ping6_2000_latencies %}
+                        </td>
+                    </tr>
+                {% endspaceless %}
+            {% endif %}
+
+        </table>
     </div>
+
+    <div class="footer">
+        Developed by Sander Steffann and Jan Žorž
+    </div>
+
+    {% if not measurement.finished %}
+        <script type="application/javascript">
+            setTimeout(function () {
+                document.location.reload();
+            }, 3900);
+        </script>
+    {% endif %}
 {% endblock %}
