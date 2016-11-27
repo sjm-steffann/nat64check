@@ -19,6 +19,12 @@
         {% block content %}
         {% endblock %}
 
+        <div class="footer">
+            Developed by <a target="_blank" href="https://www.steffann.nl/">Sander Steffann</a>
+            and <a target="_blank" href="https://www.go6.si/">Jan Žorž</a>.
+            Design by <a target="_blank" href="https://www.simplyunderstand.com">Simply Understand</a>.
+        </div>
+
         {% if settings.PIWIK_SITE_ID %}
             {% load piwik_tags %}
             {% tracking_code %}
