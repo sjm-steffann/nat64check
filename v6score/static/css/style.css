@@ -511,6 +511,11 @@ input.submit-results-search:hover {
     padding: 20px 0;
 }
 
+.footer a {
+    text-decoration: none;
+    color: white;
+}
+
 .blend-on-hover:hover {
     mix-blend-mode: difference;
     opacity: 0.87;
