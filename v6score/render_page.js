@@ -30,7 +30,11 @@ function takeScreenshot() {
     try {
         // Prevent transparent background
         page.evaluate(function () {
-            document.body.bgColor = 'white';
+            var style = document.createElement('style'),
+                text = document.createTextNode('body { background: #fff }');
+            style.setAttribute('type', 'text/css');
+            style.appendChild(text);
+            document.head.insertBefore(style, document.head.firstChild);
         });
 
         output.image = page.renderBase64('png');
