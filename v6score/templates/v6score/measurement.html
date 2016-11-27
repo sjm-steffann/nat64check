@@ -5,7 +5,7 @@
 {% block head %}
     <script type="application/javascript">
         function mark_resource(source, url, className, new_content) {
-            source.innerText = new_content;
+            source.textContent = new_content;
 
             if (url == '') {
                 // No url, so nothing to do
@@ -23,10 +23,10 @@
             var icon = document.getElementById('toggle_resource_table_icon');
             if (row.style.display == 'none') {
                 row.style.display = 'table-row';
-                icon.innerText = '▼';
+                icon.textContent = '▼';
             } else {
                 row.style.display = 'none';
-                icon.innerText = '►';
+                icon.textContent = '►';
             }
         }
     </script>
