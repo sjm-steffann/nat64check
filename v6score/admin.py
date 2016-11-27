@@ -62,8 +62,8 @@ class MeasurementAdmin(admin.ModelAdmin):
                        'v6only_resource_score', 'nat64_resource_score',
                        'admin_v4only_resources', 'admin_v6only_resources', 'admin_nat64_resources',
                        'dns_results',
-                       'ping4_latencies', 'ping4_1500_latencies',
-                       'ping6_latencies', 'ping6_1500_latencies',
+                       'ping4_latencies', 'ping4_1500_latencies', 'ping4_2000_latencies',
+                       'ping6_latencies', 'ping6_1500_latencies', 'ping6_2000_latencies',
                        'admin_v4only_data', 'v4only_data', 'v4only_debug',
                        'admin_v6only_data', 'v6only_data', 'v6only_debug',
                        'admin_nat64_data', 'nat64_data', 'nat64_debug')
@@ -79,8 +79,8 @@ class MeasurementAdmin(admin.ModelAdmin):
                        ('v6only_resource_score', 'nat64_resource_score'),
                        ('admin_v4only_resources', 'admin_v6only_resources', 'admin_nat64_resources'),
                        'dns_results',
-                       'ping4_latencies', 'ping4_1500_latencies',
-                       'ping6_latencies', 'ping6_1500_latencies')
+                       'ping4_latencies', 'ping4_1500_latencies', 'ping4_2000_latencies',
+                       'ping6_latencies', 'ping6_1500_latencies', 'ping6_2000_latencies')
         }),
         ('Images', {
             'fields': ('admin_images_inline',)
