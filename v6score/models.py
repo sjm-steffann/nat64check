@@ -384,6 +384,7 @@ class Measurement(models.Model):
 
             v4only_json = v4only_stdout.read()
             v4only_debug = v4only_stderr.read()
+            v4only_exit = v4only_stdout.channel.recv_exit_status()
 
             self.v4only_data = json.loads(
                 v4only_json.decode('utf-8'),
@@ -391,13 +392,14 @@ class Measurement(models.Model):
             ) if v4only_json else {}
             self.v4only_debug = v4only_debug.decode('utf-8')
 
+            self.v4only_data['exit_code'] = v4only_exit
+
             if 'image' in self.v4only_data:
                 if self.v4only_data['image']:
                     v4only_img_bytes = base64.decodebytes(self.v4only_data['image'].encode('ascii'))
                     # noinspection PyTypeChecker
                     v4only_img = skimage.io.imread(io.BytesIO(v4only_img_bytes))
                 del self.v4only_data['image']
-
         except socket.timeout:
             logger.error("{}: IPv4-only load timed out".format(self.url))
 
@@ -406,12 +408,15 @@ class Measurement(models.Model):
 
             v6only_json = v6only_stdout.read()
             v6only_debug = v6only_stderr.read()
+            v6only_exit = v6only_stdout.channel.recv_exit_status()
 
             self.v6only_data = json.loads(
                 v6only_json.decode('utf-8'),
                 object_pairs_hook=OrderedDict
             ) if v6only_json else {}
             self.v6only_debug = v6only_debug.decode('utf-8')
+
+            self.v6only_data['exit_code'] = v6only_exit
 
             if 'image' in self.v6only_data:
                 if self.v6only_data['image']:
@@ -427,12 +432,16 @@ class Measurement(models.Model):
 
             nat64_json = nat64_stdout.read()
             nat64_debug = nat64_stderr.read()
+            nat64_exit = nat64_stdout.channel.recv_exit_status()
 
             self.nat64_data = json.loads(
                 nat64_json.decode('utf-8'),
                 object_pairs_hook=OrderedDict
             ) if nat64_json else {}
             self.nat64_debug = nat64_debug.decode('utf-8')
+
+            self.nat64_data['exit_code'] = nat64_exit
+
             if 'image' in self.nat64_data:
                 if self.nat64_data['image']:
                     nat64_img_bytes = base64.decodebytes(self.nat64_data['image'].encode('ascii'))
