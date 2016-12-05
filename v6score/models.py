@@ -314,6 +314,7 @@ class Measurement(models.Model):
             'phantomjs',
             '--debug=true',
             '--ignore-ssl-errors=true',
+            '--local-url-access=false',
             '--local-storage-path=/dev/null',
             '--offline-storage-path=/dev/null',
             '/dev/stdin',
