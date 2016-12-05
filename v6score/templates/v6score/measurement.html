@@ -228,6 +228,37 @@
                                             >{{ resource.v6only.status_text }}</td>
                                         </tr>
                                     {% endfor %}
+
+                                    <tr>
+                                        <th>Raw JSON data</th>
+                                        <td>
+                                            <a target="_blank"
+                                               href="{% url 'measurement_data' measurement.id 'nat64' %}">JSON</a>
+                                        </td>
+                                        <td>
+                                            <a target="_blank"
+                                               href="{% url 'measurement_data' measurement.id 'v4only' %}">JSON</a>
+                                        </td>
+                                        <td>
+                                            <a target="_blank"
+                                               href="{% url 'measurement_data' measurement.id 'v6only' %}">JSON</a>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th>Browser debug output</th>
+                                        <td>
+                                            <a target="_blank"
+                                               href="{% url 'measurement_debug' measurement.id 'nat64' %}">Output</a>
+                                        </td>
+                                        <td>
+                                            <a target="_blank"
+                                               href="{% url 'measurement_debug' measurement.id 'v4only' %}">Output</a>
+                                        </td>
+                                        <td>
+                                            <a target="_blank"
+                                               href="{% url 'measurement_debug' measurement.id 'v6only' %}">Output</a>
+                                        </td>
+                                    </tr>
                                 </table>
                             </div>
                         </td>
