@@ -1,5 +1,8 @@
+import json
+
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.db.models.query_utils import Q
+from django.http.response import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
 from v6score.forms import URLForm
@@ -107,3 +110,31 @@ def show_measurement(request, measurement_id):
         'resources': resources,
         'url': measurement.url,
     })
+
+
+def show_measurement_data(request, measurement_id, dataset):
+    measurement = get_object_or_404(Measurement, pk=measurement_id)
+    if dataset == 'v4only':
+        data = measurement.v4only_data
+    elif dataset == 'v6only':
+        data = measurement.v6only_data
+    elif dataset == 'nat64':
+        data = measurement.nat64_data
+    else:
+        data = None
+
+    return HttpResponse(json.dumps(data, indent=4), content_type='application/json')
+
+
+def show_measurement_debug(request, measurement_id, dataset):
+    measurement = get_object_or_404(Measurement, pk=measurement_id)
+    if dataset == 'v4only':
+        data = measurement.v4only_debug
+    elif dataset == 'v6only':
+        data = measurement.v6only_debug
+    elif dataset == 'nat64':
+        data = measurement.nat64_debug
+    else:
+        data = ''
+
+    return HttpResponse(data, content_type='text/plain')
