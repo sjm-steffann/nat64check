@@ -41,3 +41,6 @@ db.sqlite3
 
 ### Media/capture files
 media/
+
+### SSH data
+ssh/

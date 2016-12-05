@@ -116,12 +116,16 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Defaults
-WKHTMLTOIMAGE = '/usr/local/bin/wkhtmltoimage'
 IMAGE_WIDTH = 1024
 IMAGE_HEIGHT = 1024
-V4PROXY = 'http://v4only.proxy.ipv6-lab.net:80'
-V6PROXY = 'http://v6only.proxy.ipv6-lab.net:80'
-NAT64PROXY = 'http://nat64.proxy.ipv6-lab.net:80'
+
+SSH_USERNAME = 'sander'
+SSH_PRIVATE_KEY = os.path.join(BASE_DIR, 'ssh', 'id_rsa')
+SSH_KNOWN_HOSTS = os.path.join(BASE_DIR, 'ssh', 'known_hosts')
+
+V4_HOST = 'v4only.proxy.ipv6-lab.net'
+V6_HOST = 'v6only.proxy.ipv6-lab.net'
+NAT64_HOST = 'nat64.proxy.ipv6-lab.net'
 
 # Empty piwik settings
 PIWIK_SITE_ID = None

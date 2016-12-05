@@ -5,9 +5,10 @@ import json
 import logging
 import os
 import re
+import shlex
 import signal
+import socket
 import subprocess
-import time
 import warnings
 from collections import OrderedDict
 from datetime import timedelta
@@ -23,6 +24,7 @@ from django.core.files.base import ContentFile
 from django.core.urlresolvers import reverse
 from django.db import models
 from django.utils import timezone
+from paramiko.client import SSHClient
 from psycopg2.extras import register_default_json, register_default_jsonb
 from skimage.measure import compare_ssim
 
@@ -308,57 +310,42 @@ class Measurement(models.Model):
         self.save()
 
     def run_browser_tests(self):
-        # Common stuff
-        script = os.path.realpath(os.path.join(
-            os.path.dirname(__file__),
-            'render_page.js'
-        ))
         common_options = [
             'phantomjs',
             '--debug=true',
             '--ignore-ssl-errors=true',
-            # This is the solution for upcoming versions of PhantomJS:
-            # '--local-storage-quota=-1',
-            # '--offline-storage-quota=-1',
-            # For now we create a new temp path for each run (see below)
+            '--local-storage-path=/dev/null',
+            '--offline-storage-path=/dev/null',
+            '$SCRIPT',
         ]
 
+        browser_command = ' '.join(common_options + [shlex.quote(self.url)])
+        browser_command = "SCRIPT=`mktemp`; cat > $SCRIPT; {}; rm $SCRIPT".format(browser_command)
+
         # Do the v4-only, v6-only and the NAT64 request in parallel
-        v4only_process = subprocess.Popen(
-            common_options
-            + ['--local-storage-path=/dev/null',
-               '--offline-storage-path=/dev/null',
-               '--proxy=' + settings.V4PROXY]
-            + [script, self.url],
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-            preexec_fn=ignore_signals,
-            cwd='/tmp'
-        )
-        logger.debug("Running {}".format(' '.join(v4only_process.args)))
+        v4only_client = SSHClient()
+        v4only_client.load_host_keys(settings.SSH_KNOWN_HOSTS)
+        v4only_client.connect(settings.V4_HOST, username=settings.SSH_USERNAME, key_filename=settings.SSH_PRIVATE_KEY,
+                              allow_agent=False, look_for_keys=False)
 
-        v6only_process = subprocess.Popen(
-            common_options
-            + ['--local-storage-path=/dev/null',
-               '--offline-storage-path=/dev/null',
-               '--proxy=' + settings.V6PROXY]
-            + [script, self.url],
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-            preexec_fn=ignore_signals,
-            cwd='/tmp'
-        )
-        logger.debug("Running {}".format(' '.join(v6only_process.args)))
+        logger.debug("Running '{}' on {}".format(browser_command, settings.V4_HOST))
+        v4only_stdin, v4only_stdout, v4only_stderr = v4only_client.exec_command(browser_command, timeout=120)
 
-        nat64_process = subprocess.Popen(
-            common_options
-            + ['--local-storage-path=/dev/null',
-               '--offline-storage-path=/dev/null',
-               '--proxy=' + settings.NAT64PROXY]
-            + [script, self.url],
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-            preexec_fn=ignore_signals,
-            cwd='/tmp'
-        )
-        logger.debug("Running {}".format(' '.join(nat64_process.args)))
+        v6only_client = SSHClient()
+        v6only_client.load_host_keys(settings.SSH_KNOWN_HOSTS)
+        v6only_client.connect(settings.V6_HOST, username=settings.SSH_USERNAME, key_filename=settings.SSH_PRIVATE_KEY,
+                              allow_agent=False, look_for_keys=False)
+
+        logger.debug("Running '{}' on {}".format(browser_command, settings.V4_HOST))
+        v6only_stdin, v6only_stdout, v6only_stderr = v6only_client.exec_command(browser_command, timeout=120)
+
+        nat64_client = SSHClient()
+        nat64_client.load_host_keys(settings.SSH_KNOWN_HOSTS)
+        nat64_client.connect(settings.NAT64_HOST, username=settings.SSH_USERNAME, key_filename=settings.SSH_PRIVATE_KEY,
+                             allow_agent=False, look_for_keys=False)
+
+        logger.debug("Running '{}' on {}".format(browser_command, settings.V4_HOST))
+        nat64_stdin, nat64_stdout, nat64_stderr = nat64_client.exec_command(browser_command, timeout=120)
 
         # Placeholders
         v4only_img = None
@@ -372,17 +359,38 @@ class Measurement(models.Model):
         self.v6only_data = {}
         self.nat64_data = {}
 
+        # Push the test script to the workers
+        script_filename = os.path.realpath(os.path.join(
+            os.path.dirname(__file__),
+            'render_page.js'
+        ))
+        script = open(script_filename, 'rb').read()
+
+        v4only_stdin.write(script)
+        v4only_stdin.close()
+        v4only_stdin.channel.shutdown_write()
+
+        v6only_stdin.write(script)
+        v6only_stdin.close()
+        v6only_stdin.channel.shutdown_write()
+
+        nat64_stdin.write(script)
+        nat64_stdin.close()
+        nat64_stdin.channel.shutdown_write()
+
         # Wait for tests to finish
-        start_time = time.time()
-        full_timeout = 30
-        timeout = full_timeout
         try:
-            v4only_json, v4only_debug = v4only_process.communicate(timeout=timeout)
+            logger.debug("Receiving data from IPv4-only test")
+
+            v4only_json = v4only_stdout.read()
+            v4only_debug = v4only_stderr.read()
+
             self.v4only_data = json.loads(
                 v4only_json.decode('utf-8'),
                 object_pairs_hook=OrderedDict
             ) if v4only_json else {}
             self.v4only_debug = v4only_debug.decode('utf-8')
+
             if 'image' in self.v4only_data:
                 if self.v4only_data['image']:
                     v4only_img_bytes = base64.decodebytes(self.v4only_data['image'].encode('ascii'))
@@ -390,18 +398,21 @@ class Measurement(models.Model):
                     v4only_img = skimage.io.imread(io.BytesIO(v4only_img_bytes))
                 del self.v4only_data['image']
 
-        except subprocess.TimeoutExpired:
+        except socket.timeout:
             logger.error("{}: IPv4-only load timed out".format(self.url))
-            v4only_process.kill()
 
-        timeout = full_timeout - (time.time() - start_time)
         try:
-            v6only_json, v6only_debug = v6only_process.communicate(timeout=timeout)
+            logger.debug("Receiving data from IPv6-only test")
+
+            v6only_json = v6only_stdout.read()
+            v6only_debug = v6only_stderr.read()
+
             self.v6only_data = json.loads(
                 v6only_json.decode('utf-8'),
                 object_pairs_hook=OrderedDict
             ) if v6only_json else {}
             self.v6only_debug = v6only_debug.decode('utf-8')
+
             if 'image' in self.v6only_data:
                 if self.v6only_data['image']:
                     v6only_img_bytes = base64.decodebytes(self.v6only_data['image'].encode('ascii'))
@@ -410,11 +421,13 @@ class Measurement(models.Model):
                 del self.v6only_data['image']
         except subprocess.TimeoutExpired:
             logger.error("{}: IPv6-only load timed out".format(self.url))
-            v6only_process.kill()
 
-        timeout = full_timeout - (time.time() - start_time)
         try:
-            nat64_json, nat64_debug = nat64_process.communicate(timeout=timeout)
+            logger.debug("Receiving data from NAT64 test")
+
+            nat64_json = nat64_stdout.read()
+            nat64_debug = nat64_stderr.read()
+
             self.nat64_data = json.loads(
                 nat64_json.decode('utf-8'),
                 object_pairs_hook=OrderedDict
@@ -428,7 +441,11 @@ class Measurement(models.Model):
                 del self.nat64_data['image']
         except subprocess.TimeoutExpired:
             logger.error("{}: NAT64 load timed out".format(self.url))
-            nat64_process.kill()
+
+        # Done talking to workers, close connections
+        v4only_client.close()
+        v6only_client.close()
+        nat64_client.close()
 
         # Calculate score based on resources
         v4only_resources_ok = self.v4only_resources[0]
@@ -500,7 +517,7 @@ class Measurement(models.Model):
         # Update started
         self.started = timezone.now()
 
-        # Run tests
+        # Run DNS tests
         self.run_dns_tests()
 
         # Abort quickly if no DNS
