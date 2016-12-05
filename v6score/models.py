@@ -316,11 +316,10 @@ class Measurement(models.Model):
             '--ignore-ssl-errors=true',
             '--local-storage-path=/dev/null',
             '--offline-storage-path=/dev/null',
-            '$SCRIPT',
+            '/dev/stdin',
         ]
 
         browser_command = ' '.join(common_options + [shlex.quote(self.url)])
-        browser_command = "SCRIPT=`mktemp`; cat > $SCRIPT; {}; rm $SCRIPT".format(browser_command)
 
         # Do the v4-only, v6-only and the NAT64 request in parallel
         v4only_client = SSHClient()
