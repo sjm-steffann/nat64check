@@ -56,8 +56,16 @@ button {
     content: "\f002";
 }
 
+.fa-ban:before {
+    content: "\f05e";
+}
+
 .fa-bolt:before {
     content: "\f0e7";
+}
+
+.fa-bug:before {
+    content: "\f188";
 }
 
 .fa-spinner:before {
