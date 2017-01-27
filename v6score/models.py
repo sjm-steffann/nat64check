@@ -481,7 +481,7 @@ class Measurement(models.Model):
                         # noinspection PyTypeChecker
                         v6only_img = skimage.io.imread(io.BytesIO(v6only_img_bytes))
                     del self.v6only_data['image']
-            except subprocess.TimeoutExpired:
+            except socket.timeout:
                 logger.error("{}: IPv6-only load timed out".format(self.url))
         else:
             logger.info("{}: Not running IPv6-only test".format(self.url))
@@ -507,7 +507,7 @@ class Measurement(models.Model):
                     # noinspection PyTypeChecker
                     nat64_img = skimage.io.imread(io.BytesIO(nat64_img_bytes))
                 del self.nat64_data['image']
-        except subprocess.TimeoutExpired:
+        except socket.timeout:
             logger.error("{}: NAT64 load timed out".format(self.url))
 
         # Done talking to workers, close connections
