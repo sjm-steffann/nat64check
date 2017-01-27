@@ -7,7 +7,7 @@
         function mark_resource(source, url, className, new_content) {
             source.textContent = new_content;
 
-            if (url == '') {
+            if (url === '') {
                 // No url, so nothing to do
                 return;
             }
@@ -21,7 +21,7 @@
         function toggle_resource_table() {
             var row = document.getElementById('resource-table');
             var icon = document.getElementById('toggle_resource_table_icon');
-            if (row.style.display == 'none') {
+            if (row.style.display === 'none') {
                 row.style.display = 'table-row';
                 icon.textContent = '▼';
             } else {
@@ -75,7 +75,7 @@
                         <th class="top">
                             NAT64
                             {% if measurement.nat64_image_score == 0 or measurement.nat64_image_score is None %}
-                                <div class="image-score poor"><span class="fa fa-bolt fa-lg"></span></div>
+                                <div class="image-score poor"><span class="fa fa-bug fa-lg"></span></div>
                             {% elif measurement.nat64_image_score < 0.8 %}
                                 <div class="image-score poor">{% widthratio measurement.nat64_image_score 1 100 %}%</div>
                             {% elif measurement.nat64_image_score < 0.95 %}
@@ -89,14 +89,20 @@
                         </th>
                         <th class="top">
                             IPv6-only
-                            {% if measurement.v6only_image_score == 0 or measurement.v6only_image_score is None %}
-                                <div class="image-score poor"><span class="fa fa-bolt fa-lg"></span></div>
-                            {% elif measurement.v6only_image_score < 0.8 %}
-                                <div class="image-score poor">{% widthratio measurement.v6only_image_score 1 100 %}%</div>
-                            {% elif measurement.v6only_image_score < 0.95 %}
-                                <div class="image-score mediocre2">{% widthratio measurement.v6only_image_score 1 100 %}%</div>
+                            {% if measurement.ipv6_dns_results %}
+                                {# There are IPv6 addresses, so this should work #}
+                                {% if measurement.v6only_image_score == 0 or measurement.v6only_image_score is None %}
+                                    <div class="image-score poor"><span class="fa fa-bug fa-lg"></span></div>
+                                {% elif measurement.v6only_image_score < 0.8 %}
+                                    <div class="image-score poor">{% widthratio measurement.v6only_image_score 1 100 %}%</div>
+                                {% elif measurement.v6only_image_score < 0.95 %}
+                                    <div class="image-score mediocre2">{% widthratio measurement.v6only_image_score 1 100 %}%</div>
+                                {% else %}
+                                    <div class="image-score good">{% widthratio measurement.v6only_image_score 1 100 %}%</div>
+                                {% endif %}
                             {% else %}
-                                <div class="image-score good">{% widthratio measurement.v6only_image_score 1 100 %}%</div>
+                                {# No IPv6 addresses, so not expected to work #}
+                                <div class="image-score poor"><span class="fa fa-ban fa-lg"></span></div>
                             {% endif %}
                         </th>
                     </tr>
@@ -153,7 +159,11 @@
                             <td class="score-bar">
                                 <div class="score-bar">
                                     {% if measurement.nat64_resource_score == 0 %}
-                                        <div class="poor">Unreachable</div>
+                                        {% if measurement.ipv6_dns_results and measurement.v6only_resource_score == 0%}
+                                            <div class="poor">NAT64 broken because of broken IPv6</div>
+                                        {% else %}
+                                            <div class="poor">Unreachable through NAT64</div>
+                                        {% endif %}
                                     {% elif measurement.nat64_resource_score < 0.8 %}
                                         <div class="poor"
                                              style="width: {% widthratio measurement.nat64_resource_score 1 100 %}%">
@@ -176,7 +186,15 @@
                             <td class="score-bar">
                                 <div class="score-bar">
                                     {% if measurement.v6only_resource_score == 0 %}
-                                        <div class="poor">Unreachable</div>
+                                        {% if measurement.ipv6_dns_results %}
+                                            {% if measurement.ping6_working %}
+                                                <div class="poor">IPv6 web server broken!</div>
+                                            {% else %}
+                                                <div class="poor">IPv6 broken!</div>
+                                            {% endif %}
+                                        {% else %}
+                                            <div class="poor">IPv6 not implemented</div>
+                                        {% endif %}
                                     {% elif measurement.v6only_resource_score < 0.8 %}
                                         <div class="poor"
                                              style="width: {% widthratio measurement.v6only_resource_score 1 100 %}%">

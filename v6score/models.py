@@ -277,6 +277,18 @@ class Measurement(models.Model):
 
         return ok, error
 
+    @property
+    def ping6_working(self):
+        if not self.ping6_latencies:
+            return False
+
+        for latency in self.ping6_latencies:
+            if latency != -1:
+                # Consider a result or -2 (filtered) to be ok
+                return True
+
+        return False
+
     def run_dns_tests(self):
         if self.finished:
             logger.error("{}: test already finished".format(self.url))
@@ -306,30 +318,43 @@ class Measurement(models.Model):
             return
 
         # Ping
-        ping4_process = start_ping(['ping', '-c5', '-n', self.idna_hostname])
-        ping4_1500_process = start_ping(['ping', '-c5', '-n', '-s1472', '-Mwant', self.idna_hostname])
-        ping4_2000_process = start_ping(['ping', '-c5', '-n', '-s1972', '-Mwant', self.idna_hostname])
-        ping6_process = start_ping(['ping6', '-c5', '-n', self.idna_hostname])
-        ping6_1500_process = start_ping(['ping6', '-c5', '-n', '-s1452', '-Mwant', self.idna_hostname])
-        ping6_2000_process = start_ping(['ping6', '-c5', '-n', '-s1952', '-Mwant', self.idna_hostname])
+        if self.ipv4_dns_results:
+            ping4_process = start_ping(['ping', '-c5', '-n', self.idna_hostname])
+            ping4_1500_process = start_ping(['ping', '-c5', '-n', '-s1472', '-Mwant', self.idna_hostname])
+            ping4_2000_process = start_ping(['ping', '-c5', '-n', '-s1972', '-Mwant', self.idna_hostname])
+        else:
+            ping4_process = ping4_1500_process = ping4_2000_process = None
 
-        self.ping4_latencies = parse_ping(ping4_process.communicate()[0])
-        logger.info("Ping IPv4 results: {}".format(self.ping4_latencies))
+        if self.ipv6_dns_results:
+            ping6_process = start_ping(['ping6', '-c5', '-n', self.idna_hostname])
+            ping6_1500_process = start_ping(['ping6', '-c5', '-n', '-s1452', '-Mwant', self.idna_hostname])
+            ping6_2000_process = start_ping(['ping6', '-c5', '-n', '-s1952', '-Mwant', self.idna_hostname])
+        else:
+            ping6_process = ping6_1500_process = ping6_2000_process = None
 
-        self.ping4_1500_latencies = parse_ping(ping4_1500_process.communicate()[0])
-        logger.info("Ping IPv4 (1500) results: {}".format(self.ping4_1500_latencies))
+        if ping4_process:
+            self.ping4_latencies = parse_ping(ping4_process.communicate()[0])
+            logger.info("Ping IPv4 results: {}".format(self.ping4_latencies))
 
-        self.ping4_2000_latencies = parse_ping(ping4_2000_process.communicate()[0])
-        logger.info("Ping IPv4 (2000) results: {}".format(self.ping4_2000_latencies))
+        if ping4_1500_process:
+            self.ping4_1500_latencies = parse_ping(ping4_1500_process.communicate()[0])
+            logger.info("Ping IPv4 (1500) results: {}".format(self.ping4_1500_latencies))
 
-        self.ping6_latencies = parse_ping(ping6_process.communicate()[0])
-        logger.info("Ping IPv6 results: {}".format(self.ping6_latencies))
+        if ping4_2000_process:
+            self.ping4_2000_latencies = parse_ping(ping4_2000_process.communicate()[0])
+            logger.info("Ping IPv4 (2000) results: {}".format(self.ping4_2000_latencies))
 
-        self.ping6_1500_latencies = parse_ping(ping6_1500_process.communicate()[0])
-        logger.info("Ping IPv6 (1500) results: {}".format(self.ping6_1500_latencies))
+        if ping6_process:
+            self.ping6_latencies = parse_ping(ping6_process.communicate()[0])
+            logger.info("Ping IPv6 results: {}".format(self.ping6_latencies))
 
-        self.ping6_2000_latencies = parse_ping(ping6_2000_process.communicate()[0])
-        logger.info("Ping IPv6 (2000) results: {}".format(self.ping6_2000_latencies))
+        if ping6_1500_process:
+            self.ping6_1500_latencies = parse_ping(ping6_1500_process.communicate()[0])
+            logger.info("Ping IPv6 (1500) results: {}".format(self.ping6_1500_latencies))
+
+        if ping6_2000_process:
+            self.ping6_2000_latencies = parse_ping(ping6_2000_process.communicate()[0])
+            logger.info("Ping IPv6 (2000) results: {}".format(self.ping6_2000_latencies))
 
         self.save()
 
@@ -349,23 +374,29 @@ class Measurement(models.Model):
         # Do the v4-only, v6-only and the NAT64 request in parallel
         v4only_client = SSHClient()
         v4only_client.load_host_keys(settings.SSH_KNOWN_HOSTS)
-        v4only_client.connect(settings.V4_HOST, username=settings.SSH_USERNAME, key_filename=settings.SSH_PRIVATE_KEY,
+        v4only_client.connect(settings.V4_HOST,
+                              username=settings.SSH_USERNAME, key_filename=settings.SSH_PRIVATE_KEY,
                               allow_agent=False, look_for_keys=False)
 
         logger.debug("Running '{}' on {}".format(browser_command, settings.V4_HOST))
         v4only_stdin, v4only_stdout, v4only_stderr = v4only_client.exec_command(browser_command, timeout=120)
 
-        v6only_client = SSHClient()
-        v6only_client.load_host_keys(settings.SSH_KNOWN_HOSTS)
-        v6only_client.connect(settings.V6_HOST, username=settings.SSH_USERNAME, key_filename=settings.SSH_PRIVATE_KEY,
-                              allow_agent=False, look_for_keys=False)
+        if self.ipv6_dns_results:
+            v6only_client = SSHClient()
+            v6only_client.load_host_keys(settings.SSH_KNOWN_HOSTS)
+            v6only_client.connect(settings.V6_HOST,
+                                  username=settings.SSH_USERNAME, key_filename=settings.SSH_PRIVATE_KEY,
+                                  allow_agent=False, look_for_keys=False)
 
-        logger.debug("Running '{}' on {}".format(browser_command, settings.V4_HOST))
-        v6only_stdin, v6only_stdout, v6only_stderr = v6only_client.exec_command(browser_command, timeout=120)
+            logger.debug("Running '{}' on {}".format(browser_command, settings.V4_HOST))
+            v6only_stdin, v6only_stdout, v6only_stderr = v6only_client.exec_command(browser_command, timeout=120)
+        else:
+            v6only_client = v6only_stdin = v6only_stdout = v6only_stderr = None
 
         nat64_client = SSHClient()
         nat64_client.load_host_keys(settings.SSH_KNOWN_HOSTS)
-        nat64_client.connect(settings.NAT64_HOST, username=settings.SSH_USERNAME, key_filename=settings.SSH_PRIVATE_KEY,
+        nat64_client.connect(settings.NAT64_HOST,
+                             username=settings.SSH_USERNAME, key_filename=settings.SSH_PRIVATE_KEY,
                              allow_agent=False, look_for_keys=False)
 
         logger.debug("Running '{}' on {}".format(browser_command, settings.V4_HOST))
@@ -394,9 +425,10 @@ class Measurement(models.Model):
         v4only_stdin.close()
         v4only_stdin.channel.shutdown_write()
 
-        v6only_stdin.write(script)
-        v6only_stdin.close()
-        v6only_stdin.channel.shutdown_write()
+        if v6only_client:
+            v6only_stdin.write(script)
+            v6only_stdin.close()
+            v6only_stdin.channel.shutdown_write()
 
         nat64_stdin.write(script)
         nat64_stdin.close()
@@ -427,29 +459,32 @@ class Measurement(models.Model):
         except socket.timeout:
             logger.error("{}: IPv4-only load timed out".format(self.url))
 
-        try:
-            logger.debug("Receiving data from IPv6-only test")
+        if v6only_client:
+            try:
+                logger.debug("Receiving data from IPv6-only test")
 
-            v6only_json = v6only_stdout.read()
-            v6only_debug = v6only_stderr.read()
-            v6only_exit = v6only_stdout.channel.recv_exit_status()
+                v6only_json = v6only_stdout.read()
+                v6only_debug = v6only_stderr.read()
+                v6only_exit = v6only_stdout.channel.recv_exit_status()
 
-            self.v6only_data = json.loads(
-                v6only_json.decode('utf-8'),
-                object_pairs_hook=OrderedDict
-            ) if v6only_json else {}
-            self.v6only_debug = v6only_debug.decode('utf-8')
+                self.v6only_data = json.loads(
+                    v6only_json.decode('utf-8'),
+                    object_pairs_hook=OrderedDict
+                ) if v6only_json else {}
+                self.v6only_debug = v6only_debug.decode('utf-8')
 
-            self.v6only_data['exit_code'] = v6only_exit
+                self.v6only_data['exit_code'] = v6only_exit
 
-            if 'image' in self.v6only_data:
-                if self.v6only_data['image']:
-                    v6only_img_bytes = base64.decodebytes(self.v6only_data['image'].encode('ascii'))
-                    # noinspection PyTypeChecker
-                    v6only_img = skimage.io.imread(io.BytesIO(v6only_img_bytes))
-                del self.v6only_data['image']
-        except subprocess.TimeoutExpired:
-            logger.error("{}: IPv6-only load timed out".format(self.url))
+                if 'image' in self.v6only_data:
+                    if self.v6only_data['image']:
+                        v6only_img_bytes = base64.decodebytes(self.v6only_data['image'].encode('ascii'))
+                        # noinspection PyTypeChecker
+                        v6only_img = skimage.io.imread(io.BytesIO(v6only_img_bytes))
+                    del self.v6only_data['image']
+            except subprocess.TimeoutExpired:
+                logger.error("{}: IPv6-only load timed out".format(self.url))
+        else:
+            logger.info("{}: Not running IPv6-only test".format(self.url))
 
         try:
             logger.debug("Receiving data from NAT64 test")
@@ -476,9 +511,12 @@ class Measurement(models.Model):
             logger.error("{}: NAT64 load timed out".format(self.url))
 
         # Done talking to workers, close connections
-        v4only_client.close()
-        v6only_client.close()
-        nat64_client.close()
+        if v4only_client:
+            v4only_client.close()
+        if v6only_client:
+            v6only_client.close()
+        if nat64_client:
+            nat64_client.close()
 
         # Calculate score based on resources
         v4only_resources_ok = self.v4only_resources[0]
