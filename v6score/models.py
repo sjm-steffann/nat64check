@@ -88,7 +88,7 @@ def parse_ping(ping_output: bytes) -> List:
 
 
 def my_basedir(instance, filename):
-    return 'capture/{}/{}/{}'.format(instance.hostname,
+    return 'capture/{}/{}/{}'.format(instance.idna_hostname,
                                      datetime.datetime.now().strftime('%Y-%m-%d/%H-%M'),
                                      filename)
 
