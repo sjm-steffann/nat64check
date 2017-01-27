@@ -160,7 +160,7 @@
                                 <div class="score-bar">
                                     {% if measurement.nat64_resource_score == 0 %}
                                         {% if measurement.ipv6_dns_results and measurement.v6only_resource_score == 0%}
-                                            <div class="poor">NAT64 broken because of broken IPv6</div>
+                                            <div class="poor">Fails because of broken IPv6</div>
                                         {% else %}
                                             <div class="poor">Unreachable through NAT64</div>
                                         {% endif %}
