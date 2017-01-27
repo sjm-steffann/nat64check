@@ -196,6 +196,30 @@ class Measurement(models.Model):
         self.url = urlunparse((scheme, netloc, path, params, query, fragment))
 
     @property
+    def idna_hostname(self):
+        # Return the hostname part of the URL, and handle IDN as well
+        url_parts = urlparse(self.url, scheme='http')
+        return url_parts.netloc.encode('idna').decode('ascii')
+
+    @idna_hostname.setter
+    def idna_hostname(self, new_hostname):
+        scheme, netloc, path, params, query, fragment = urlparse(self.url, scheme='http')
+        netloc = new_hostname.encode('ascii').decode('idna')
+        self.url = urlunparse((scheme, netloc, path, params, query, fragment))
+
+    @property
+    def idna_url(self):
+        scheme, netloc, path, params, query, fragment = urlparse(self.url, scheme='http')
+        netloc = netloc.encode('idna').decode('ascii')
+        return urlunparse((scheme, netloc, path, params, query, fragment))
+
+    @idna_url.setter
+    def idna_url(self, new_url):
+        scheme, netloc, path, params, query, fragment = urlparse(new_url, scheme='http')
+        netloc = netloc.encode('ascii').decode('idna')
+        self.url = urlunparse((scheme, netloc, path, params, query, fragment))
+
+    @property
     def ipv4_dns_results(self):
         return [address for address in map(ip_address, self.dns_results) if address.version == 4]
 
@@ -258,20 +282,20 @@ class Measurement(models.Model):
             logger.error("{}: test already finished".format(self.url))
             return
 
-        dns_results = get_addresses(self.hostname)
+        dns_results = get_addresses(self.idna_hostname)
 
         # If no records and no www in URL then try again with www
-        if not dns_results and not self.hostname.startswith('www.'):
-            try_hostname = 'www.' + self.hostname
+        if not dns_results and not self.idna_hostname.startswith('www.'):
+            try_hostname = 'www.' + self.idna_hostname
             dns_results = get_addresses(try_hostname)
             if not dns_results:
-                logger.error("Hostname {} doesn't resolve".format(self.hostname))
+                logger.error("Hostname {} doesn't resolve".format(self.idna_hostname))
             else:
-                logger.warning("Hostname {} didn't resolve, using {}".format(self.hostname, try_hostname))
-                self.hostname = try_hostname
+                logger.warning("Hostname {} didn't resolve, using {}".format(self.idna_hostname, try_hostname))
+                self.idna_hostname = try_hostname
 
         for address in dns_results:
-            logger.info("Found address for {}: {}".format(self.hostname, address))
+            logger.info("Found address for {}: {}".format(self.idna_hostname, address))
 
         self.dns_results = dns_results
         self.save()
@@ -282,12 +306,12 @@ class Measurement(models.Model):
             return
 
         # Ping
-        ping4_process = start_ping(['ping', '-c5', '-n', self.hostname])
-        ping4_1500_process = start_ping(['ping', '-c5', '-n', '-s1472', '-Mwant', self.hostname])
-        ping4_2000_process = start_ping(['ping', '-c5', '-n', '-s1972', '-Mwant', self.hostname])
-        ping6_process = start_ping(['ping6', '-c5', '-n', self.hostname])
-        ping6_1500_process = start_ping(['ping6', '-c5', '-n', '-s1452', '-Mwant', self.hostname])
-        ping6_2000_process = start_ping(['ping6', '-c5', '-n', '-s1952', '-Mwant', self.hostname])
+        ping4_process = start_ping(['ping', '-c5', '-n', self.idna_hostname])
+        ping4_1500_process = start_ping(['ping', '-c5', '-n', '-s1472', '-Mwant', self.idna_hostname])
+        ping4_2000_process = start_ping(['ping', '-c5', '-n', '-s1972', '-Mwant', self.idna_hostname])
+        ping6_process = start_ping(['ping6', '-c5', '-n', self.idna_hostname])
+        ping6_1500_process = start_ping(['ping6', '-c5', '-n', '-s1452', '-Mwant', self.idna_hostname])
+        ping6_2000_process = start_ping(['ping6', '-c5', '-n', '-s1952', '-Mwant', self.idna_hostname])
 
         self.ping4_latencies = parse_ping(ping4_process.communicate()[0])
         logger.info("Ping IPv4 results: {}".format(self.ping4_latencies))
@@ -320,7 +344,7 @@ class Measurement(models.Model):
             '/dev/stdin',
         ]
 
-        browser_command = ' '.join(common_options + [shlex.quote(self.url)])
+        browser_command = ' '.join(common_options + [shlex.quote(self.idna_url)])
 
         # Do the v4-only, v6-only and the NAT64 request in parallel
         v4only_client = SSHClient()
