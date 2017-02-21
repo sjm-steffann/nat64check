@@ -25,6 +25,7 @@ from django.core.urlresolvers import reverse
 from django.db import models
 from django.utils import timezone
 from paramiko.client import SSHClient
+from paramiko.rsakey import RSAKey
 from psycopg2.extras import register_default_json, register_default_jsonb
 from skimage.measure import compare_ssim
 
@@ -306,8 +307,9 @@ class Measurement(models.Model):
                 logger.warning("Hostname {} didn't resolve, using {}".format(self.idna_hostname, try_hostname))
                 self.idna_hostname = try_hostname
 
-        for address in dns_results:
-            logger.info("Found address for {}: {}".format(self.idna_hostname, address))
+        if dns_results:
+            for address in dns_results:
+                logger.info("Found address for {}: {}".format(self.idna_hostname, address))
 
         self.dns_results = dns_results
         self.save()
@@ -371,11 +373,14 @@ class Measurement(models.Model):
 
         browser_command = ' '.join(common_options + [shlex.quote(self.idna_url)])
 
+        # Read the private key
+        private_key = RSAKey.from_private_key_file(settings.SSH_PRIVATE_KEY)
+
         # Do the v4-only, v6-only and the NAT64 request in parallel
         v4only_client = SSHClient()
         v4only_client.load_host_keys(settings.SSH_KNOWN_HOSTS)
         v4only_client.connect(settings.V4_HOST,
-                              username=settings.SSH_USERNAME, key_filename=settings.SSH_PRIVATE_KEY,
+                              username=settings.SSH_USERNAME, pkey=private_key,
                               allow_agent=False, look_for_keys=False)
 
         logger.debug("Running '{}' on {}".format(browser_command, settings.V4_HOST))
@@ -385,7 +390,7 @@ class Measurement(models.Model):
             v6only_client = SSHClient()
             v6only_client.load_host_keys(settings.SSH_KNOWN_HOSTS)
             v6only_client.connect(settings.V6_HOST,
-                                  username=settings.SSH_USERNAME, key_filename=settings.SSH_PRIVATE_KEY,
+                                  username=settings.SSH_USERNAME, pkey=private_key,
                                   allow_agent=False, look_for_keys=False)
 
             logger.debug("Running '{}' on {}".format(browser_command, settings.V4_HOST))
@@ -396,7 +401,7 @@ class Measurement(models.Model):
         nat64_client = SSHClient()
         nat64_client.load_host_keys(settings.SSH_KNOWN_HOSTS)
         nat64_client.connect(settings.NAT64_HOST,
-                             username=settings.SSH_USERNAME, key_filename=settings.SSH_PRIVATE_KEY,
+                             username=settings.SSH_USERNAME, pkey=private_key,
                              allow_agent=False, look_for_keys=False)
 
         logger.debug("Running '{}' on {}".format(browser_command, settings.V4_HOST))
